@@ -98,8 +98,11 @@ export interface SAQQuestion {
   question_text: string;
   correct_answer?: string;
   answer_text?: string;
+  answer_guidelines?: string;
+  marking_criteria?: string;
   marks?: number;
   marks_obtained?: number;
+  grader_comments?: string;
   created_at: string;
 }
 

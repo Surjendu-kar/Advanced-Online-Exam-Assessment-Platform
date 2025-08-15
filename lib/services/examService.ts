@@ -18,6 +18,7 @@ export interface CreateExamRequest {
 
 export interface UpdateExamRequest extends Partial<CreateExamRequest> {
   is_published?: boolean;
+  total_marks?: number;
 }
 
 export interface GetExamsOptions {

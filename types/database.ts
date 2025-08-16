@@ -73,7 +73,7 @@ export interface ProctoringLog {
     | "suspicious_activity"
     | "multiple_faces"
     | "no_face_detected";
-  details?: Record<string, any>;
+  details?: Record<string, unknown>;
   timestamp: string;
 }
 
@@ -106,6 +106,12 @@ export interface SAQQuestion {
   created_at: string;
 }
 
+export interface TestCase {
+  input: string;
+  expected_output: string;
+  is_hidden: boolean;
+}
+
 export interface CodingQuestion {
   id: string;
   exam_id: string;
@@ -118,6 +124,7 @@ export interface CodingQuestion {
   marks?: number;
   marks_obtained?: number;
   language?: string;
+  test_cases?: TestCase[];
   created_at: string;
 }
 

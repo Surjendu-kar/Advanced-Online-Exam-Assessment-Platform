@@ -4,13 +4,15 @@ import React from "react";
 import Link from "next/link";
 import { useAuthContext } from "../../lib/components/AuthProvider";
 import { Button } from "../ui/Button";
+import { AuthService } from "../../lib/auth";
 
 export function Navbar() {
   const { user, profile, signOut } = useAuthContext();
 
   const handleSignOut = async () => {
     try {
-      await signOut();
+      await AuthService.signOut();
+      window.location.href = "/";
     } catch (error) {
       console.error("Sign out error:", error);
     }

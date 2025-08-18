@@ -1,6 +1,3 @@
-// Database types for Advanced Online Exam Platform
-// Generated from Supabase schema
-
 export interface User {
   id: string;
   email?: string;

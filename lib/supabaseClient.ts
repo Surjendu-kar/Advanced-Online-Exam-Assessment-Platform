@@ -1,4 +1,5 @@
 import { createClient, SupabaseClient } from "@supabase/supabase-js";
+import { Database } from "../types/supabase";
 
 // Environment variables validation
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -20,29 +21,33 @@ try {
 }
 
 // Create Supabase client with enhanced configuration
-export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
-  auth: {
-    autoRefreshToken: true,
-    persistSession: true,
-    detectSessionInUrl: true,
-    flowType: "pkce",
-  },
-  global: {
-    headers: {
-      "X-Client-Info": "online-exam-platform",
+export const supabase: SupabaseClient<Database> = createClient<Database>(
+  supabaseUrl,
+  supabaseAnonKey,
+  {
+    auth: {
+      autoRefreshToken: true,
+      persistSession: true,
+      detectSessionInUrl: true,
+      flowType: "pkce",
     },
-  },
-  db: {
-    schema: "public",
-  },
-});
+    global: {
+      headers: {
+        "X-Client-Info": "online-exam-platform",
+      },
+    },
+    db: {
+      schema: "public",
+    },
+  }
+);
 
 // Error handling utility for Supabase operations
 export class SupabaseError extends Error {
   constructor(
     message: string,
     public code?: string,
-    public details?: any
+    public details?: unknown
   ) {
     super(message);
     this.name = "SupabaseError";
@@ -52,13 +57,19 @@ export class SupabaseError extends Error {
 // Utility function to handle Supabase responses
 export function handleSupabaseResponse<T>(response: {
   data: T | null;
-  error: any;
+  error: unknown;
 }): T {
   if (response.error) {
+    const error = response.error as { 
+      message?: string; 
+      code?: string; 
+      details?: unknown 
+    };
+    
     throw new SupabaseError(
-      response.error.message || "An unknown error occurred",
-      response.error.code,
-      response.error.details
+      error.message || "An unknown error occurred",
+      error.code,
+      error.details
     );
   }
 

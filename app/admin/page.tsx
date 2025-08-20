@@ -2,12 +2,21 @@
 
 import { useAuth } from "@/hooks/useAuth";
 import { useRouter } from "next/navigation";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/Button";
+import { supabase } from "@/lib/supabaseClient";
 
 export default function AdminPage() {
   const { user, loading, logout } = useAuth();
   const router = useRouter();
+
+  const [email, setEmail] = useState("");
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
+  const [institution, setInstitution] = useState("");
+  const [message, setMessage] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
     if (!loading && (!user || user.profile?.role !== "admin")) {
@@ -33,6 +42,54 @@ export default function AdminPage() {
   const handleLogout = async () => {
     await logout();
     router.push("/login");
+  };
+
+  const handleInvite = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setMessage(null);
+    setError(null);
+    setSubmitting(true);
+
+    try {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      if (!session) {
+        setError("Not authenticated");
+        setSubmitting(false);
+        return;
+      }
+
+      const res = await fetch("/api/teachers", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({
+          email,
+          firstName,
+          lastName,
+          institution,
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data.error || "Failed to invite teacher");
+      } else {
+        setMessage(`Teacher invited successfully: ${email}`);
+        setEmail("");
+        setFirstName("");
+        setLastName("");
+        setInstitution("");
+      }
+    } catch (err) {
+      console.error(err);
+      setError("Something went wrong");
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -68,6 +125,62 @@ export default function AdminPage() {
                 Manage teachers, monitor exams, and oversee the platform
               </p>
 
+              {/* Invite Teacher Form */}
+              <div className="bg-white p-6 rounded-lg shadow max-w-lg mx-auto mb-8">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                  Invite a Teacher
+                </h3>
+                <form onSubmit={handleInvite} className="space-y-4">
+                  <input
+                    type="email"
+                    required
+                    placeholder="Teacher Email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    className="w-full border border-black p-2 rounded placeholder-gray-400 text-black"
+                  />
+                  <input
+                    type="text"
+                    required
+                    placeholder="First Name"
+                    value={firstName}
+                    onChange={(e) => setFirstName(e.target.value)}
+                    className="w-full border border-black p-2 rounded placeholder-gray-400 text-black"
+                  />
+                  <input
+                    type="text"
+                    required
+                    placeholder="Last Name"
+                    value={lastName}
+                    onChange={(e) => setLastName(e.target.value)}
+                    className="w-full border border-black p-2 rounded placeholder-gray-400 text-black"
+                  />
+                  <input
+                    type="text"
+                    required
+                    placeholder="Institution"
+                    value={institution}
+                    onChange={(e) => setInstitution(e.target.value)}
+                    className="w-full border border-black p-2 rounded placeholder-gray-400 text-black"
+                  />
+                  <Button
+                    type="submit"
+                    className="w-full"
+                    disabled={submitting}
+                  >
+                    {submitting ? "Inviting..." : "Invite Teacher"}
+                  </Button>
+                </form>
+
+                {message && (
+                  <p className="mt-4 text-green-600 font-medium">{message}</p>
+                )}
+                {error && (
+                  <p className="mt-4 text-red-600 font-medium">{error}</p>
+                )}
+              </div>
+
+              {/* Other Admin Cards */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-4xl mx-auto">
                 <div className="bg-white p-6 rounded-lg shadow">
                   <h3 className="text-lg font-semibold text-gray-900 mb-2">

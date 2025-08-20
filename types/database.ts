@@ -152,3 +152,16 @@ export interface PaginatedResponse<T> extends ApiResponse<T[]> {
   page?: number;
   limit?: number;
 }
+
+export interface TeacherInvitation {
+  id: string;
+  email: string;
+  token: string;
+  admin_id: string;
+  first_name: string;
+  last_name: string;
+  institution?: string;
+  expires_at: string;
+  used_at?: string;
+  created_at: string;
+}

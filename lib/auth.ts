@@ -1,5 +1,6 @@
 import { supabase } from "./supabaseClient";
 import { UserProfile, AuthUser } from "@/types/database";
+import { createRouteClient } from "./supabaseRouteClient";
 
 export interface LoginCredentials {
   email: string;
@@ -29,11 +30,10 @@ export async function login(
       return { user: null, error: "Login failed" };
     }
 
-    // Get user profile, create if doesn't exist
     let profile = await getUserProfile(data.user.id);
 
     if (!profile && data.user.email) {
-      // Create profile for new user (default to student role)
+    
       profile = await createUserProfile(
         data.user.id,
         data.user.email,
@@ -41,17 +41,20 @@ export async function login(
       );
     }
 
+    const authUser: AuthUser = {
+      id: data.user.id,
+      email: data.user.email,
+      created_at: data.user.created_at,
+      updated_at: data.user.updated_at,
+      profile,
+    };
+
+
     return {
-      user: {
-        id: data.user.id,
-        email: data.user.email,
-        created_at: data.user.created_at,
-        updated_at: data.user.updated_at,
-        profile,
-      },
+      user: authUser,
       error: null,
     };
-  } catch {
+  } catch (err) {
     return { user: null, error: "An unexpected error occurred" };
   }
 }
@@ -66,20 +69,23 @@ export async function logout(): Promise<{ error: string | null }> {
   }
 }
 
-// Get current user session
-export async function getCurrentUser(): Promise<AuthUser | null> {
+// Pass Request when in server mode
+export async function getCurrentUser(
+  server: boolean = false,
+  req?: Request
+): Promise<AuthUser | null> {
   try {
+    const client = server && req ? createRouteClient(req) : supabase;
+
     const {
       data: { user },
-    } = await supabase.auth.getUser();
+    } = await client.auth.getUser();
 
     if (!user) return null;
 
-    // Get user profile, create if doesn't exist
     let profile = await getUserProfile(user.id);
 
     if (!profile && user.email) {
-      // Create profile for existing user (default to student role)
       profile = await createUserProfile(user.id, user.email, "student");
     }
 

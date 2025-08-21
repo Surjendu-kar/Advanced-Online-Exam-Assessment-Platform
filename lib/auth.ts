@@ -1,6 +1,8 @@
+// lib/auth.ts
 import { supabase } from "./supabaseClient";
 import { UserProfile, AuthUser } from "@/types/database";
 import { createRouteClient } from "./supabaseRouteClient";
+import { toast } from "react-hot-toast";
 
 export interface LoginCredentials {
   email: string;
@@ -23,17 +25,19 @@ export async function login(
     });
 
     if (error) {
+      // Show error toast
+      toast.error(error.message);
       return { user: null, error: error.message };
     }
 
     if (!data.user) {
+      toast.error("Login failed");
       return { user: null, error: "Login failed" };
     }
 
     let profile = await getUserProfile(data.user.id);
 
     if (!profile && data.user.email) {
-    
       profile = await createUserProfile(
         data.user.id,
         data.user.email,
@@ -49,13 +53,17 @@ export async function login(
       profile,
     };
 
+    // Show success toast
+    toast.success(`Welcome back, ${profile?.first_name || data.user.email}!`);
 
     return {
       user: authUser,
       error: null,
     };
   } catch (err) {
-    return { user: null, error: "An unexpected error occurred" };
+    const errorMessage = "An unexpected error occurred";
+    toast.error(errorMessage);
+    return { user: null, error: errorMessage };
   }
 }
 
@@ -63,9 +71,23 @@ export async function login(
 export async function logout(): Promise<{ error: string | null }> {
   try {
     const { error } = await supabase.auth.signOut();
-    return { error: error?.message || null };
+    
+    if (error) {
+      toast.error("Logout failed: " + error.message);
+      return { error: error.message };
+    }
+
+    // Clear any additional storage if needed
+    if (typeof window !== "undefined") {
+      localStorage.removeItem("exam_platform_user");
+    }
+
+    toast.success("Logged out successfully");
+    return { error: null };
   } catch {
-    return { error: "An unexpected error occurred during logout" };
+    const errorMessage = "An unexpected error occurred during logout";
+    toast.error(errorMessage);
+    return { error: errorMessage };
   }
 }
 
@@ -96,7 +118,8 @@ export async function getCurrentUser(
       updated_at: user.updated_at,
       profile,
     };
-  } catch {
+  } catch (error) {
+    console.error("Error getting current user:", error);
     return null;
   }
 }

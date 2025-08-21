@@ -115,7 +115,10 @@ export default function LoginPage() {
         </form>
 
         <div className="text-center text-sm text-gray-500">
-          <p>Don't have an account? Contact your administrator for an invitation.</p>
+          <p>
+            Don&#39;t have an account? Contact your administrator for an
+            invitation.
+          </p>
         </div>
       </div>
     </div>

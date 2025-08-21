@@ -7,17 +7,16 @@ import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { TeacherInvitation } from "@/types/database";
 import { Eye, EyeOff } from "lucide-react";
+import { toast } from "react-hot-toast";
 
-interface TeacherSignupPageProps {
-  params: {
-    token: string;
-  };
+interface PageProps {
+  params: Promise<{ token: string }>;
 }
 
-export default function TeacherSignupPage({ params }: TeacherSignupPageProps) {
-  const { token } = params;
+export default function TeacherSignupPage({ params }: PageProps) {
   const router = useRouter();
-
+  
+  const [token, setToken] = useState<string>("");
   const [invitation, setInvitation] = useState<TeacherInvitation | null>(null);
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -31,9 +30,20 @@ export default function TeacherSignupPage({ params }: TeacherSignupPageProps) {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
-  // Validate invitation token on load
+  // Extract token from params Promise
   useEffect(() => {
-    validateToken();
+    const getToken = async () => {
+      const resolvedParams = await params;
+      setToken(resolvedParams.token);
+    };
+    getToken();
+  }, [params]);
+
+  // Validate invitation token when token is available
+  useEffect(() => {
+    if (token) {
+      validateToken();
+    }
   }, [token]);
 
   const validateToken = async () => {
@@ -117,10 +127,9 @@ export default function TeacherSignupPage({ params }: TeacherSignupPageProps) {
         return;
       }
 
-      // Success - redirect to login with success message
-      router.push(
-        "/login?message=Account created successfully. Please log in."
-      );
+      // Success - redirect to login with toast notification
+      toast.success("Account created successfully! Please log in.");
+      router.push("/login");
     } catch (err) {
       setError("An unexpected error occurred");
     } finally {

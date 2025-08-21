@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { supabase } from "@/lib/supabaseClient";
+import { toast } from "react-hot-toast";
 
 export default function AdminPage() {
   const { user, loading, logout } = useAuth();
@@ -14,8 +15,6 @@ export default function AdminPage() {
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [institution, setInstitution] = useState("");
-  const [message, setMessage] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
@@ -46,8 +45,6 @@ export default function AdminPage() {
 
   const handleInvite = async (e: React.FormEvent) => {
     e.preventDefault();
-    setMessage(null);
-    setError(null);
     setSubmitting(true);
 
     try {
@@ -55,7 +52,7 @@ export default function AdminPage() {
         data: { session },
       } = await supabase.auth.getSession();
       if (!session) {
-        setError("Not authenticated");
+        toast.error("Not authenticated");
         setSubmitting(false);
         return;
       }
@@ -76,9 +73,10 @@ export default function AdminPage() {
 
       const data = await res.json();
       if (!res.ok) {
-        setError(data.error || "Failed to invite teacher");
+        toast.error(data.error || "Failed to invite teacher");
       } else {
-        setMessage(`Teacher invited successfully: ${email}`);
+        toast.success(`Teacher invited successfully! Invitation sent to ${email}`);
+        // Clear form on success
         setEmail("");
         setFirstName("");
         setLastName("");
@@ -86,7 +84,7 @@ export default function AdminPage() {
       }
     } catch (err) {
       console.error(err);
-      setError("Something went wrong");
+      toast.error("Something went wrong. Please try again.");
     } finally {
       setSubmitting(false);
     }
@@ -138,6 +136,7 @@ export default function AdminPage() {
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     className="w-full border border-black p-2 rounded placeholder-gray-400 text-black"
+                    disabled={submitting}
                   />
                   <input
                     type="text"
@@ -146,6 +145,7 @@ export default function AdminPage() {
                     value={firstName}
                     onChange={(e) => setFirstName(e.target.value)}
                     className="w-full border border-black p-2 rounded placeholder-gray-400 text-black"
+                    disabled={submitting}
                   />
                   <input
                     type="text"
@@ -154,6 +154,7 @@ export default function AdminPage() {
                     value={lastName}
                     onChange={(e) => setLastName(e.target.value)}
                     className="w-full border border-black p-2 rounded placeholder-gray-400 text-black"
+                    disabled={submitting}
                   />
                   <input
                     type="text"
@@ -162,22 +163,17 @@ export default function AdminPage() {
                     value={institution}
                     onChange={(e) => setInstitution(e.target.value)}
                     className="w-full border border-black p-2 rounded placeholder-gray-400 text-black"
+                    disabled={submitting}
                   />
                   <Button
                     type="submit"
                     className="w-full"
+                    loading={submitting}
                     disabled={submitting}
                   >
-                    {submitting ? "Inviting..." : "Invite Teacher"}
+                    {submitting ? "Sending Invitation..." : "Invite Teacher"}
                   </Button>
                 </form>
-
-                {message && (
-                  <p className="mt-4 text-green-600 font-medium">{message}</p>
-                )}
-                {error && (
-                  <p className="mt-4 text-red-600 font-medium">{error}</p>
-                )}
               </div>
 
               {/* Other Admin Cards */}

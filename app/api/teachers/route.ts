@@ -22,7 +22,6 @@ export async function POST(req: Request) {
     // Get current logged-in user
     const {
       data: { user },
-      error,
     } = await routeClient.auth.getUser();
 
     if (!user) {
@@ -37,7 +36,10 @@ export async function POST(req: Request) {
       .single();
 
     if (profile?.role !== "admin") {
-      return NextResponse.json({ error: "Forbidden - Admin access required" }, { status: 403 });
+      return NextResponse.json(
+        { error: "Forbidden - Admin access required" },
+        { status: 403 }
+      );
     }
 
     // Create teacher invitation using server client (admin privileges needed)
@@ -79,7 +81,6 @@ export async function GET(req: Request) {
     // Get current logged-in user
     const {
       data: { user },
-      error,
     } = await routeClient.auth.getUser();
 
     if (!user) {
@@ -94,7 +95,10 @@ export async function GET(req: Request) {
       .single();
 
     if (profile?.role !== "admin") {
-      return NextResponse.json({ error: "Forbidden - Admin access required" }, { status: 403 });
+      return NextResponse.json(
+        { error: "Forbidden - Admin access required" },
+        { status: 403 }
+      );
     }
 
     // Get teacher invitations
@@ -105,7 +109,10 @@ export async function GET(req: Request) {
       .order("created_at", { ascending: false });
 
     if (invitationsError) {
-      return NextResponse.json({ error: "Failed to fetch invitations" }, { status: 500 });
+      return NextResponse.json(
+        { error: "Failed to fetch invitations" },
+        { status: 500 }
+      );
     }
 
     // Get existing teachers created by this admin
@@ -117,7 +124,10 @@ export async function GET(req: Request) {
       .order("created_at", { ascending: false });
 
     if (teachersError) {
-      return NextResponse.json({ error: "Failed to fetch teachers" }, { status: 500 });
+      return NextResponse.json(
+        { error: "Failed to fetch teachers" },
+        { status: 500 }
+      );
     }
 
     return NextResponse.json({

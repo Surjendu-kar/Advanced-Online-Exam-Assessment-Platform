@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { TeacherInvitation } from "@/types/database";
+import { User } from "@supabase/supabase-js";
 import nodemailer from "nodemailer";
 
 export interface CreateTeacherInvitationData {
@@ -115,7 +116,7 @@ export async function completeTeacherRegistration(
   password: string
 ): Promise<{
   success: boolean;
-  user?: any;
+  user?: User;
   error?: string;
 }> {
   try {
@@ -308,7 +309,7 @@ The Exam Platform Team`,
 // Legacy function for backward compatibility (you can remove this later)
 export async function createTeacherAccount(
   supabase: SupabaseClient,
-  data: any
+  data: CreateTeacherInvitationData
 ) {
   console.warn(
     "createTeacherAccount is deprecated. Use createTeacherInvitation instead."

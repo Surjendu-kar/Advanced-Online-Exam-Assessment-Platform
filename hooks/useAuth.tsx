@@ -62,17 +62,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const refreshUser = async () => {
+  const refreshUser = async (): Promise<void> => {
     try {
       const currentUser = await getCurrentUser();
       setUser(currentUser);
       saveUserToStorage(currentUser);
-      return currentUser;
     } catch (error) {
       console.error("Error refreshing user:", error);
       setUser(null);
       saveUserToStorage(null);
-      return null;
     }
   };
 

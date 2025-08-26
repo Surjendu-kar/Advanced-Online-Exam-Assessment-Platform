@@ -1,7 +1,6 @@
 // lib/studentInvitations.ts
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { StudentInvitation } from "@/types/database";
-import { User } from "@supabase/supabase-js";
 import nodemailer from "nodemailer";
 
 export interface CreateStudentInvitationData {
@@ -44,7 +43,7 @@ export async function createStudentInvitation(
   try {
     // Check if user already exists
     const { data: existingUsers } = await supabase.auth.admin.listUsers();
-    let existingUser = existingUsers.users?.find(
+    const existingUser = existingUsers.users?.find(
       (user) => user.email === email
     );
 
@@ -201,7 +200,7 @@ export async function acceptStudentInvitation(
 
     // Create user account if not exists
     const { data: existingUsers } = await supabase.auth.admin.listUsers();
-    let existingUser = existingUsers.users?.find(
+    const existingUser = existingUsers.users?.find(
       (user) => user.email === invitation.student_email
     );
 
@@ -373,7 +372,7 @@ export async function getStudentInvitations(
 export async function getTeacherStudents(
   supabase: SupabaseClient,
   teacherId: string
-): Promise<any[]> {
+): Promise<UserProfile[]> {
   const { data, error } = await supabase
     .from("user_profiles")
     .select("*")

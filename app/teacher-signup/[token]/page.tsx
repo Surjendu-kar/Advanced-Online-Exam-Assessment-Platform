@@ -1,7 +1,7 @@
 // app/teacher-signup/[token]/page.tsx
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
@@ -39,14 +39,7 @@ export default function TeacherSignupPage({ params }: PageProps) {
     getToken();
   }, [params]);
 
-  // Validate invitation token when token is available
-  useEffect(() => {
-    if (token) {
-      validateToken();
-    }
-  }, [token]);
-
-  const validateToken = async () => {
+  const validateToken = useCallback(async () => {
     try {
       const response = await fetch(`/api/teacher-signup/validate`, {
         method: "POST",
@@ -63,12 +56,19 @@ export default function TeacherSignupPage({ params }: PageProps) {
       }
 
       setInvitation(data.invitation);
-    } catch (err) {
+    } catch {
       setError("Failed to validate invitation");
     } finally {
       setLoading(false);
     }
-  };
+  }, [token]);
+
+  // Validate invitation token when token is available
+  useEffect(() => {
+    if (token) {
+      validateToken();
+    }
+  }, [token, validateToken]);
 
   const validateForm = () => {
     const errors = { password: "", confirmPassword: "" };
@@ -130,7 +130,7 @@ export default function TeacherSignupPage({ params }: PageProps) {
       // Success - redirect to login with toast notification
       toast.success("Account created successfully! Please log in.");
       router.push("/login");
-    } catch (err) {
+    } catch {
       setError("An unexpected error occurred");
     } finally {
       setSubmitting(false);

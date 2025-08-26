@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/Button";
 import { toast } from "react-hot-toast";
@@ -26,13 +26,7 @@ export default function StudentInvitationPage() {
   const [error, setError] = useState<string | null>(null);
   const [shouldRedirect, setShouldRedirect] = useState(false);
 
-  useEffect(() => {
-    if (token) {
-      validateInvitation();
-    }
-  }, [token]);
-
-  const validateInvitation = async () => {
+  const validateInvitation = useCallback(async () => {
     try {
       setLoading(true);
       const response = await fetch(`/api/student-invitation/${token}`);
@@ -57,7 +51,13 @@ export default function StudentInvitationPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [token, router]);
+
+  useEffect(() => {
+    if (token) {
+      validateInvitation();
+    }
+  }, [token, validateInvitation]);
 
   const acceptInvitation = async () => {
     try {

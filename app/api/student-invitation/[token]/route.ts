@@ -9,12 +9,12 @@ import {
 // GET method to validate invitation token
 export async function GET(
   req: Request,
-  { params }: { params: { token: string } }
+  { params }: { params: Promise<{ token: string }> }
 ) {
   const serverClient = createServerClient();
 
   try {
-    const { token } = params;
+    const { token } = await params;
 
     if (!token) {
       return NextResponse.json({ error: "Token is required" }, { status: 400 });
@@ -52,12 +52,12 @@ export async function GET(
 // POST method to accept invitation and create session
 export async function POST(
   req: Request,
-  { params }: { params: { token: string } }
+  { params }: { params: Promise<{ token: string }> }
 ) {
   const serverClient = createServerClient();
 
   try {
-    const { token } = params;
+    const { token } = await params;
 
     if (!token) {
       return NextResponse.json({ error: "Token is required" }, { status: 400 });

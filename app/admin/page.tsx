@@ -7,21 +7,96 @@ import { Button } from "@/components/ui/Button";
 import { supabase } from "@/lib/supabaseClient";
 import { toast } from "react-hot-toast";
 
+interface StudentInvitation {
+  id: string;
+  student_email: string;
+  status: string;
+  exam_id?: string;
+  expires_at: string;
+  created_at: string;
+}
+
+interface TeacherInvitation {
+  id: string;
+  email: string;
+  first_name: string;
+  last_name: string;
+  expires_at: string;
+  used_at?: string;
+  created_at: string;
+}
+
 export default function AdminPage() {
   const { user, loading, logout } = useAuth();
   const router = useRouter();
 
+  // Form states
   const [email, setEmail] = useState("");
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [institution, setInstitution] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
+  // Student invitation states
+  const [studentEmail, setStudentEmail] = useState("");
+  const [studentFirstName, setStudentFirstName] = useState("");
+  const [studentLastName, setStudentLastName] = useState("");
+  const [studentSubmitting, setStudentSubmitting] = useState(false);
+
+  // Data states
+  const [studentInvitations, setStudentInvitations] = useState<
+    StudentInvitation[]
+  >([]);
+  const [teacherInvitations, setTeacherInvitations] = useState<
+    TeacherInvitation[]
+  >([]);
+  const [loadingData, setLoadingData] = useState(true);
+
+  // Tab state
+  const [activeTab, setActiveTab] = useState<"teachers" | "students">(
+    "teachers"
+  );
+
   useEffect(() => {
     if (!loading && (!user || user.profile?.role !== "admin")) {
       router.push("/login");
+    } else if (user && user.profile?.role === "admin") {
+      fetchData();
     }
   }, [user, loading, router]);
+
+  const fetchData = async () => {
+    try {
+      const session = await supabase.auth.getSession();
+      if (!session.data.session) return;
+
+      // Fetch teacher data
+      const teacherRes = await fetch("/api/teachers", {
+        headers: {
+          Authorization: `Bearer ${session.data.session.access_token}`,
+        },
+      });
+      if (teacherRes.ok) {
+        const teacherData = await teacherRes.json();
+        setTeacherInvitations(teacherData.invitations || []);
+      }
+
+      // Fetch student data
+      const studentRes = await fetch("/api/students", {
+        headers: {
+          Authorization: `Bearer ${session.data.session.access_token}`,
+        },
+      });
+      if (studentRes.ok) {
+        const studentData = await studentRes.json();
+        setStudentInvitations(studentData.invitations || []);
+      }
+    } catch (error) {
+      console.error("Error fetching data:", error);
+    } finally {
+      setLoadingData(false);
+    }
+  };
 
   if (loading) {
     return (
@@ -43,15 +118,13 @@ export default function AdminPage() {
     router.push("/login");
   };
 
-  const handleInvite = async (e: React.FormEvent) => {
+  const handleTeacherInvite = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitting(true);
 
     try {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-      if (!session) {
+      const session = await supabase.auth.getSession();
+      if (!session.data.session) {
         toast.error("Not authenticated");
         setSubmitting(false);
         return;
@@ -61,7 +134,7 @@ export default function AdminPage() {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${session.access_token}`,
+          Authorization: `Bearer ${session.data.session.access_token}`,
         },
         body: JSON.stringify({
           email,
@@ -75,18 +148,102 @@ export default function AdminPage() {
       if (!res.ok) {
         toast.error(data.error || "Failed to invite teacher");
       } else {
-        toast.success(`Teacher invited successfully! Invitation sent to ${email}`);
-        // Clear form on success
+        toast.success(
+          `Teacher invited successfully! Invitation sent to ${email}`
+        );
         setEmail("");
         setFirstName("");
         setLastName("");
         setInstitution("");
+        fetchData(); // Refresh data
       }
     } catch (err) {
       console.error(err);
       toast.error("Something went wrong. Please try again.");
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const handleStudentInvite = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setStudentSubmitting(true);
+
+    try {
+      const session = await supabase.auth.getSession();
+      if (!session.data.session) {
+        toast.error("Not authenticated");
+        setStudentSubmitting(false);
+        return;
+      }
+
+      const res = await fetch("/api/students", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session.data.session.access_token}`,
+        },
+        body: JSON.stringify({
+          email: studentEmail,
+          firstName: studentFirstName,
+          lastName: studentLastName,
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        toast.error(data.error || "Failed to invite student");
+      } else {
+        toast.success(
+          `Student invited successfully! Invitation sent to ${studentEmail}`
+        );
+        setStudentEmail("");
+        setStudentFirstName("");
+        setStudentLastName("");
+        fetchData(); // Refresh data
+      }
+    } catch (err) {
+      console.error(err);
+      toast.error("Something went wrong. Please try again.");
+    } finally {
+      setStudentSubmitting(false);
+    }
+  };
+
+  const getStatusBadge = (status: string, usedAt?: string) => {
+    if (usedAt) {
+      return (
+        <span className="px-2 py-1 text-xs rounded-full bg-green-100 text-green-800">
+          Completed
+        </span>
+      );
+    }
+
+    switch (status) {
+      case "pending":
+        return (
+          <span className="px-2 py-1 text-xs rounded-full bg-yellow-100 text-yellow-800">
+            Pending
+          </span>
+        );
+      case "accepted":
+        return (
+          <span className="px-2 py-1 text-xs rounded-full bg-green-100 text-green-800">
+            Accepted
+          </span>
+        );
+      case "expired":
+        return (
+          <span className="px-2 py-1 text-xs rounded-full bg-red-100 text-red-800">
+            Expired
+          </span>
+        );
+      default:
+        return (
+          <span className="px-2 py-1 text-xs rounded-full bg-gray-100 text-gray-800">
+            {status}
+          </span>
+        );
     }
   };
 
@@ -114,28 +271,56 @@ export default function AdminPage() {
 
       <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
         <div className="px-4 py-6 sm:px-0">
-          <div className="border-4 border-dashed border-gray-200 rounded-lg p-8">
-            <div className="text-center">
-              <h2 className="text-2xl font-bold text-gray-900 mb-4">
-                Admin Panel
-              </h2>
-              <p className="text-gray-600 mb-8">
-                Manage teachers, monitor exams, and oversee the platform
-              </p>
+          <div className="text-center mb-8">
+            <h2 className="text-2xl font-bold text-gray-900 mb-4">
+              Admin Panel
+            </h2>
+            <p className="text-gray-600">
+              Manage users, invitations, and oversee the platform
+            </p>
+          </div>
 
-              {/* Invite Teacher Form */}
-              <div className="bg-white p-6 rounded-lg shadow max-w-lg mx-auto mb-8">
+          {/* Tabs */}
+          <div className="mb-8">
+            <div className="flex space-x-1 bg-gray-100 p-1 rounded-lg max-w-md mx-auto">
+              <button
+                onClick={() => setActiveTab("teachers")}
+                className={`flex-1 px-4 py-2 text-sm font-medium rounded-md transition-colors ${
+                  activeTab === "teachers"
+                    ? "bg-white text-gray-900 shadow-sm"
+                    : "text-gray-600 hover:text-gray-900"
+                }`}
+              >
+                Teachers
+              </button>
+              <button
+                onClick={() => setActiveTab("students")}
+                className={`flex-1 px-4 py-2 text-sm font-medium rounded-md transition-colors ${
+                  activeTab === "students"
+                    ? "bg-white text-gray-900 shadow-sm"
+                    : "text-gray-600 hover:text-gray-900"
+                }`}
+              >
+                Students
+              </button>
+            </div>
+          </div>
+
+          {/* Teacher Section */}
+          {activeTab === "teachers" && (
+            <div className="space-y-8">
+              <div className="bg-white p-6 rounded-lg shadow max-w-lg mx-auto">
                 <h3 className="text-lg font-semibold text-gray-900 mb-4">
                   Invite a Teacher
                 </h3>
-                <form onSubmit={handleInvite} className="space-y-4">
+                <form onSubmit={handleTeacherInvite} className="space-y-4">
                   <input
                     type="email"
                     required
                     placeholder="Teacher Email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    className="w-full border border-black p-2 rounded placeholder-gray-400 text-black"
+                    className="w-full border border-gray-300 p-3 rounded-md placeholder-gray-400 text-black focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     disabled={submitting}
                   />
                   <input
@@ -144,7 +329,7 @@ export default function AdminPage() {
                     placeholder="First Name"
                     value={firstName}
                     onChange={(e) => setFirstName(e.target.value)}
-                    className="w-full border border-black p-2 rounded placeholder-gray-400 text-black"
+                    className="w-full border border-gray-300 p-3 rounded-md placeholder-gray-400 text-black focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     disabled={submitting}
                   />
                   <input
@@ -153,7 +338,7 @@ export default function AdminPage() {
                     placeholder="Last Name"
                     value={lastName}
                     onChange={(e) => setLastName(e.target.value)}
-                    className="w-full border border-black p-2 rounded placeholder-gray-400 text-black"
+                    className="w-full border border-gray-300 p-3 rounded-md placeholder-gray-400 text-black focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     disabled={submitting}
                   />
                   <input
@@ -162,7 +347,7 @@ export default function AdminPage() {
                     placeholder="Institution"
                     value={institution}
                     onChange={(e) => setInstitution(e.target.value)}
-                    className="w-full border border-black p-2 rounded placeholder-gray-400 text-black"
+                    className="w-full border border-gray-300 p-3 rounded-md placeholder-gray-400 text-black focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     disabled={submitting}
                   />
                   <Button
@@ -176,40 +361,180 @@ export default function AdminPage() {
                 </form>
               </div>
 
-              {/* Other Admin Cards */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-4xl mx-auto">
-                <div className="bg-white p-6 rounded-lg shadow">
-                  <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                    Teacher Management
+              {/* Teacher Invitations List */}
+              <div className="bg-white rounded-lg shadow overflow-hidden">
+                <div className="px-6 py-4 border-b border-gray-200">
+                  <h3 className="text-lg font-semibold text-gray-900">
+                    Teacher Invitations
                   </h3>
-                  <p className="text-gray-600 mb-4">
-                    Add, edit, and manage teacher accounts
-                  </p>
-                  <Button className="w-full">Manage Teachers</Button>
                 </div>
-
-                <div className="bg-white p-6 rounded-lg shadow">
-                  <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                    System Analytics
-                  </h3>
-                  <p className="text-gray-600 mb-4">
-                    View platform usage and performance metrics
-                  </p>
-                  <Button className="w-full">View Analytics</Button>
-                </div>
-
-                <div className="bg-white p-6 rounded-lg shadow">
-                  <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                    Platform Settings
-                  </h3>
-                  <p className="text-gray-600 mb-4">
-                    Configure system settings and preferences
-                  </p>
-                  <Button className="w-full">Settings</Button>
+                <div className="overflow-x-auto">
+                  {loadingData ? (
+                    <div className="p-6 text-center text-gray-500">
+                      Loading invitations...
+                    </div>
+                  ) : teacherInvitations.length === 0 ? (
+                    <div className="p-6 text-center text-gray-500">
+                      No teacher invitations yet
+                    </div>
+                  ) : (
+                    <table className="min-w-full divide-y divide-gray-200">
+                      <thead className="bg-gray-50">
+                        <tr>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Teacher
+                          </th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Email
+                          </th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Status
+                          </th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Sent
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody className="bg-white divide-y divide-gray-200">
+                        {teacherInvitations.map((invitation) => (
+                          <tr key={invitation.id}>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                              {invitation.first_name} {invitation.last_name}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                              {invitation.email}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              {getStatusBadge(
+                                invitation.used_at ? "completed" : "pending",
+                                invitation.used_at
+                              )}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                              {new Date(
+                                invitation.created_at
+                              ).toLocaleDateString()}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  )}
                 </div>
               </div>
             </div>
-          </div>
+          )}
+
+          {/* Student Section */}
+          {activeTab === "students" && (
+            <div className="space-y-8">
+              <div className="bg-white p-6 rounded-lg shadow max-w-lg mx-auto">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                  Invite a Student
+                </h3>
+                <form onSubmit={handleStudentInvite} className="space-y-4">
+                  <input
+                    type="email"
+                    required
+                    placeholder="Student Email"
+                    value={studentEmail}
+                    onChange={(e) => setStudentEmail(e.target.value)}
+                    className="w-full border border-gray-300 p-3 rounded-md placeholder-gray-400 text-black focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    disabled={studentSubmitting}
+                  />
+                  <input
+                    type="text"
+                    required
+                    placeholder="First Name"
+                    value={studentFirstName}
+                    onChange={(e) => setStudentFirstName(e.target.value)}
+                    className="w-full border border-gray-300 p-3 rounded-md placeholder-gray-400 text-black focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    disabled={studentSubmitting}
+                  />
+                  <input
+                    type="text"
+                    required
+                    placeholder="Last Name"
+                    value={studentLastName}
+                    onChange={(e) => setStudentLastName(e.target.value)}
+                    className="w-full border border-gray-300 p-3 rounded-md placeholder-gray-400 text-black focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    disabled={studentSubmitting}
+                  />
+                  <Button
+                    type="submit"
+                    className="w-full"
+                    loading={studentSubmitting}
+                    disabled={studentSubmitting}
+                  >
+                    {studentSubmitting
+                      ? "Sending Invitation..."
+                      : "Invite Student"}
+                  </Button>
+                </form>
+              </div>
+
+              {/* Student Invitations List */}
+              <div className="bg-white rounded-lg shadow overflow-hidden">
+                <div className="px-6 py-4 border-b border-gray-200">
+                  <h3 className="text-lg font-semibold text-gray-900">
+                    Student Invitations
+                  </h3>
+                </div>
+                <div className="overflow-x-auto">
+                  {loadingData ? (
+                    <div className="p-6 text-center text-gray-500">
+                      Loading invitations...
+                    </div>
+                  ) : studentInvitations.length === 0 ? (
+                    <div className="p-6 text-center text-gray-500">
+                      No student invitations yet
+                    </div>
+                  ) : (
+                    <table className="min-w-full divide-y divide-gray-200">
+                      <thead className="bg-gray-50">
+                        <tr>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Student Email
+                          </th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Status
+                          </th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Exam
+                          </th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Sent
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody className="bg-white divide-y divide-gray-200">
+                        {studentInvitations.map((invitation) => (
+                          <tr key={invitation.id}>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                              {invitation.student_email}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              {getStatusBadge(invitation.status)}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                              {invitation.exam_id
+                                ? "Specific Exam"
+                                : "General Access"}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                              {new Date(
+                                invitation.created_at
+                              ).toLocaleDateString()}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </main>
     </div>

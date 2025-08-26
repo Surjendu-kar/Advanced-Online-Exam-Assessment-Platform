@@ -163,6 +163,7 @@ export interface TeacherInvitation {
   first_name: string;
   last_name: string;
   institution?: string;
+  status: "pending" | "accepted" | "expired" | "cancelled";
   expires_at: string;
   used_at?: string;
   created_at: string;

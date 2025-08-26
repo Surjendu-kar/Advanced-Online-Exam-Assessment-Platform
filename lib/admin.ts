@@ -9,6 +9,7 @@ export interface CreateTeacherInvitationData {
   lastName: string;
   institution?: string;
   createdBy: string;
+  expiresAt?: Date;
 }
 
 export interface CreateTeacherInvitationResult {
@@ -36,6 +37,7 @@ export async function createTeacherInvitation(
     lastName,
     institution,
     createdBy,
+    expiresAt,
   }: CreateTeacherInvitationData
 ): Promise<CreateTeacherInvitationResult> {
   try {
@@ -52,12 +54,12 @@ export async function createTeacherInvitation(
       };
     }
 
-    // Check if invitation already exists and is not used
+    // Check if invitation already exists and is pending
     const { data: existingInvitation } = await supabase
       .from("teacher_invitations")
       .select("*")
       .eq("email", email)
-      .is("used_at", null)
+      .eq("status", "pending")
       .single();
 
     if (existingInvitation) {
@@ -69,8 +71,8 @@ export async function createTeacherInvitation(
 
     // Generate invitation token
     const token = generateInvitationToken();
-    const expiresAt = new Date();
-    expiresAt.setDate(expiresAt.getDate() + 7); // 7 days expiry
+    const invitationExpiresAt =
+      expiresAt || new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days default
 
     // Create invitation record
     const { data: invitation, error: invitationError } = await supabase
@@ -82,7 +84,8 @@ export async function createTeacherInvitation(
         first_name: firstName,
         last_name: lastName,
         institution,
-        expires_at: expiresAt.toISOString(),
+        status: "pending",
+        expires_at: invitationExpiresAt.toISOString(),
       })
       .select()
       .single();
@@ -125,7 +128,7 @@ export async function completeTeacherRegistration(
       .from("teacher_invitations")
       .select("*")
       .eq("token", token)
-      .is("used_at", null)
+      .eq("status", "pending")
       .single();
 
     if (invitationError || !invitation) {
@@ -184,10 +187,13 @@ export async function completeTeacherRegistration(
       };
     }
 
-    // Mark invitation as used
+    // Mark invitation as used/accepted
     await supabase
       .from("teacher_invitations")
-      .update({ used_at: new Date().toISOString() })
+      .update({
+        status: "accepted",
+        used_at: new Date().toISOString(),
+      })
       .eq("token", token);
 
     return {
@@ -216,7 +222,7 @@ export async function validateInvitationToken(
       .from("teacher_invitations")
       .select("*")
       .eq("token", token)
-      .is("used_at", null)
+      .eq("status", "pending")
       .single();
 
     if (error || !invitation) {

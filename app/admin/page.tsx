@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { supabase } from "@/lib/supabaseClient";
 import { toast } from "react-hot-toast";
+import { TeacherInvitation } from "@/types/database";
 
 interface StudentInvitation {
   id: string;
@@ -19,16 +20,6 @@ interface StudentInvitation {
   accepted_at?: string;
 }
 
-interface TeacherInvitation {
-  id: string;
-  email: string;
-  first_name: string;
-  last_name: string;
-  expires_at: string;
-  used_at?: string;
-  created_at: string;
-}
-
 export default function AdminPage() {
   const { user, loading, logout } = useAuth();
   const router = useRouter();
@@ -38,6 +29,7 @@ export default function AdminPage() {
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [institution, setInstitution] = useState("");
+  const [expiryDate, setExpiryDate] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
   // Student invitation states
@@ -145,6 +137,7 @@ export default function AdminPage() {
           firstName,
           lastName,
           institution,
+          expiresAt: expiryDate || undefined,
         }),
       });
 
@@ -159,6 +152,7 @@ export default function AdminPage() {
         setFirstName("");
         setLastName("");
         setInstitution("");
+        setExpiryDate("");
         fetchData(); // Refresh data
       }
     } catch (err) {
@@ -217,10 +211,11 @@ export default function AdminPage() {
   };
 
   const getStatusBadge = (status: string, usedAt?: string) => {
-    if (usedAt) {
+    // Handle legacy format where used_at determines status
+    if (usedAt && !status) {
       return (
         <span className="px-2 py-1 text-xs rounded-full bg-green-100 text-green-800">
-          Completed
+          Accepted
         </span>
       );
     }
@@ -242,6 +237,18 @@ export default function AdminPage() {
         return (
           <span className="px-2 py-1 text-xs rounded-full bg-red-100 text-red-800">
             Expired
+          </span>
+        );
+      case "cancelled":
+        return (
+          <span className="px-2 py-1 text-xs rounded-full bg-gray-100 text-gray-800">
+            Cancelled
+          </span>
+        );
+      case "completed": // Legacy status used for backwards compatibility
+        return (
+          <span className="px-2 py-1 text-xs rounded-full bg-green-100 text-green-800">
+            Accepted
           </span>
         );
       default:
@@ -356,6 +363,23 @@ export default function AdminPage() {
                     className="w-full border border-gray-300 p-3 rounded-md placeholder-gray-400 text-black focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     disabled={submitting}
                   />
+                  <div className="space-y-2">
+                    <label className="block text-sm font-medium text-gray-700">
+                      Expiry Date (Optional)
+                    </label>
+                    <input
+                      type="date"
+                      placeholder="Expiry Date (Optional)"
+                      value={expiryDate}
+                      onChange={(e) => setExpiryDate(e.target.value)}
+                      className="w-full border border-gray-300 p-3 rounded-md placeholder-gray-400 text-black focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      disabled={submitting}
+                      min={new Date().toISOString().split("T")[0]}
+                    />
+                    <p className="text-xs text-gray-500">
+                      If not specified, invitation will expire in 7 days
+                    </p>
+                  </div>
                   <Button
                     type="submit"
                     className="w-full"
@@ -388,16 +412,22 @@ export default function AdminPage() {
                       <thead className="bg-gray-50">
                         <tr>
                           <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                            Teacher
+                            Teacher Name
                           </th>
                           <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                             Email
                           </th>
                           <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Institution
+                          </th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                             Status
                           </th>
                           <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                            Sent
+                            Invited
+                          </th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Expires
                           </th>
                         </tr>
                       </thead>
@@ -410,16 +440,24 @@ export default function AdminPage() {
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                               {invitation.email}
                             </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                              {invitation.institution || "Not specified"}
+                            </td>
                             <td className="px-6 py-4 whitespace-nowrap">
                               {getStatusBadge(
-                                invitation.used_at ? "completed" : "pending",
-                                invitation.used_at
+                                invitation.status ||
+                                  (invitation.used_at ? "accepted" : "pending")
                               )}
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                               {new Date(
                                 invitation.created_at
-                              ).toLocaleDateString()}
+                              ).toLocaleDateString("en-GB")}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                              {new Date(
+                                invitation.expires_at
+                              ).toLocaleDateString("en-GB")}
                             </td>
                           </tr>
                         ))}

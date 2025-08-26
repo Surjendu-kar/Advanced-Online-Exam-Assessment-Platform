@@ -213,16 +213,14 @@ export default function TeacherSignupPage({ params }: PageProps) {
                 required
                 className="text-black pr-10"
               />
-              {password.length > 0 && (
-                <button
-                  type="button"
-                  className="absolute right-3 top-9 text-gray-500"
-                  onClick={() => setShowPassword((v) => !v)}
-                  tabIndex={-1}
-                >
-                  {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
-                </button>
-              )}
+              <button
+                type="button"
+                className="absolute right-3 top-9 text-gray-500"
+                onClick={() => setShowPassword((v) => !v)}
+                tabIndex={-1}
+              >
+                {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+              </button>
             </div>
 
             <div className="relative">
@@ -236,20 +234,14 @@ export default function TeacherSignupPage({ params }: PageProps) {
                 required
                 className="text-black pr-10"
               />
-              {confirmPassword.length > 0 && (
-                <button
-                  type="button"
-                  className="absolute right-3 top-9 text-gray-500"
-                  onClick={() => setShowConfirmPassword((v) => !v)}
-                  tabIndex={-1}
-                >
-                  {showConfirmPassword ? (
-                    <EyeOff size={20} />
-                  ) : (
-                    <Eye size={20} />
-                  )}
-                </button>
-              )}
+              <button
+                type="button"
+                className="absolute right-3 top-9 text-gray-500"
+                onClick={() => setShowConfirmPassword((v) => !v)}
+                tabIndex={-1}
+              >
+                {showConfirmPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+              </button>
             </div>
 
             <div className="text-xs text-gray-500">

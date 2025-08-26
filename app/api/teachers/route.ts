@@ -9,7 +9,8 @@ export async function POST(req: Request) {
   const serverClient = createServerClient();
 
   try {
-    const { email, firstName, lastName, institution } = await req.json();
+    const { email, firstName, lastName, institution, expiresAt } =
+      await req.json();
 
     // Validate input
     if (!email || !firstName || !lastName) {
@@ -49,6 +50,7 @@ export async function POST(req: Request) {
       lastName,
       institution,
       createdBy: user.id,
+      expiresAt: expiresAt ? new Date(expiresAt) : undefined,
     });
 
     if (!result.success) {

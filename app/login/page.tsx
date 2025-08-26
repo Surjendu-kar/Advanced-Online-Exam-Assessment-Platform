@@ -6,12 +6,14 @@ import { useRouter } from "next/navigation";
 import { login, getRedirectPath } from "@/lib/auth";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
+import { Eye, EyeOff } from "lucide-react";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const router = useRouter();
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -63,16 +65,26 @@ export default function LoginPage() {
               className="text-black"
             />
 
-            <Input
-              label="Password"
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-              placeholder="Enter your password"
-              autoComplete="current-password"
-              className="text-black"
-            />
+            <div className="relative">
+              <Input
+                label="Password"
+                type={showPassword ? "text" : "password"}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+                placeholder="Enter your password"
+                autoComplete="current-password"
+                className="text-black pr-10"
+              />
+              <button
+                type="button"
+                className="absolute right-3 top-9 text-gray-500"
+                onClick={() => setShowPassword((v) => !v)}
+                tabIndex={-1}
+              >
+                {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+              </button>
+            </div>
           </div>
 
           {error && (

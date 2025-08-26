@@ -41,6 +41,7 @@ export default function AdminPage() {
   const [studentEmail, setStudentEmail] = useState("");
   const [studentFirstName, setStudentFirstName] = useState("");
   const [studentLastName, setStudentLastName] = useState("");
+  const [studentExpiryDate, setStudentExpiryDate] = useState("");
   const [studentSubmitting, setStudentSubmitting] = useState(false);
 
   // Data states
@@ -187,6 +188,7 @@ export default function AdminPage() {
           email: studentEmail,
           firstName: studentFirstName,
           lastName: studentLastName,
+          expiresAt: studentExpiryDate || undefined,
         }),
       });
 
@@ -200,6 +202,7 @@ export default function AdminPage() {
         setStudentEmail("");
         setStudentFirstName("");
         setStudentLastName("");
+        setStudentExpiryDate("");
         fetchData(); // Refresh data
       }
     } catch (err) {
@@ -460,6 +463,23 @@ export default function AdminPage() {
                     className="w-full border border-gray-300 p-3 rounded-md placeholder-gray-400 text-black focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     disabled={studentSubmitting}
                   />
+                  <div className="space-y-2">
+                    <label className="block text-sm font-medium text-gray-700">
+                      Expiry Date (Optional)
+                    </label>
+                    <input
+                      type="date"
+                      placeholder="Expiry Date (Optional)"
+                      value={studentExpiryDate}
+                      onChange={(e) => setStudentExpiryDate(e.target.value)}
+                      className="w-full border border-gray-300 p-3 rounded-md placeholder-gray-400 text-black focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      disabled={studentSubmitting}
+                      min={new Date().toISOString().split("T")[0]}
+                    />
+                    <p className="text-xs text-gray-500">
+                      If not specified, invitation will expire in 2 days
+                    </p>
+                  </div>
                   <Button
                     type="submit"
                     className="w-full"

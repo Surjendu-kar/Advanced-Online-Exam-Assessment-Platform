@@ -199,7 +199,7 @@ export default function StudentInvitationPage() {
             <p className="mt-1">
               <strong>Expires:</strong>{" "}
               {invitation &&
-                new Date(invitation.expires_at).toLocaleDateString()}
+                new Date(invitation.expires_at).toLocaleDateString("en-GB")}
             </p>
           </div>
 

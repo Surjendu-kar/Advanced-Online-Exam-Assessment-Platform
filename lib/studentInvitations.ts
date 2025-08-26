@@ -10,6 +10,7 @@ export interface CreateStudentInvitationData {
   lastName: string;
   examId?: string;
   createdBy: string; // teacher_id
+  expiresAt?: Date; // optional expiry date
 }
 
 export interface CreateStudentInvitationResult {
@@ -31,7 +32,14 @@ function generateInvitationToken(): string {
 // Create student invitation using Supabase auth invite
 export async function createStudentInvitation(
   supabase: SupabaseClient,
-  { email, firstName, lastName, examId, createdBy }: CreateStudentInvitationData
+  {
+    email,
+    firstName,
+    lastName,
+    examId,
+    createdBy,
+    expiresAt,
+  }: CreateStudentInvitationData
 ): Promise<CreateStudentInvitationResult> {
   try {
     // Check if user already exists
@@ -66,19 +74,21 @@ export async function createStudentInvitation(
       studentUserId = existingUser.id;
 
       // For existing users, just create invitation record
-      const expiresAt = new Date();
-      expiresAt.setDate(expiresAt.getDate() + 30);
+      const invitationExpiresAt =
+        expiresAt || new Date(Date.now() + 2 * 24 * 60 * 60 * 1000);
 
       const { data: invitation, error: invitationError } = await supabase
         .from("student_invitations")
         .insert({
           teacher_id: createdBy,
           student_email: email,
+          first_name: firstName,
+          last_name: lastName,
           invitation_token: invitationToken || generateInvitationToken(),
           exam_id: examId || null,
           student_id: studentUserId,
           status: "pending",
-          expires_at: expiresAt.toISOString(),
+          expires_at: invitationExpiresAt.toISOString(),
         })
         .select()
         .single();
@@ -97,18 +107,20 @@ export async function createStudentInvitation(
     } else {
       // Create invitation record first, then send custom email (like teacher flow)
       const invitationToken = generateInvitationToken();
-      const expiresAt = new Date();
-      expiresAt.setDate(expiresAt.getDate() + 30);
+      const invitationExpiresAt =
+        expiresAt || new Date(Date.now() + 2 * 24 * 60 * 60 * 1000);
 
       const { data: invitation, error: invitationError } = await supabase
         .from("student_invitations")
         .insert({
           teacher_id: createdBy,
           student_email: email,
+          first_name: firstName,
+          last_name: lastName,
           invitation_token: invitationToken,
           exam_id: examId || null,
           status: "pending",
-          expires_at: expiresAt.toISOString(),
+          expires_at: invitationExpiresAt.toISOString(),
         })
         .select()
         .single();
@@ -218,8 +230,8 @@ export async function acceptStudentInvitation(
           id: newUser.user.id,
           role: "student",
           created_by: invitation.teacher_id,
-          first_name: invitation.student_email.split("@")[0],
-          last_name: "",
+          first_name: invitation.first_name,
+          last_name: invitation.last_name,
           verified: true,
         });
 
@@ -481,7 +493,7 @@ export async function resendStudentInvitation(
     }
 
     // Resend email
-    const firstName = invitation.student_email.split("@")[0]; // Fallback if no name stored
+    const firstName = invitation.first_name || invitation.student_email.split("@")[0]; // Use stored name or fallback
     await sendStudentInvitationEmail(
       invitation.student_email,
       firstName,

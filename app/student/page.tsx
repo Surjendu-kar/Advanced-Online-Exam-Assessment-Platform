@@ -6,7 +6,7 @@ import { useEffect } from "react";
 import { Button } from "@/components/ui/Button";
 
 export default function StudentPage() {
-  const { user, loading } = useAuth();
+  const { user, loading, logout } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
@@ -30,6 +30,11 @@ export default function StudentPage() {
     return null;
   }
 
+  const handleLogout = async () => {
+    await logout();
+    router.push("/login");
+  };
+
   return (
     <div className="min-h-screen bg-gray-50">
       <nav className="bg-white shadow">
@@ -44,6 +49,9 @@ export default function StudentPage() {
               <span className="text-sm text-gray-700">
                 Welcome, {user.profile?.first_name || "Student"}
               </span>
+              <Button variant="outline" onClick={handleLogout}>
+                Logout
+              </Button>
             </div>
           </div>
         </div>

@@ -42,6 +42,8 @@ export interface StudentInvitation {
   id: string;
   teacher_id: string;
   student_email: string;
+  first_name: string;
+  last_name: string;
   invitation_token: string;
   exam_id?: string;
   status: "pending" | "accepted" | "expired";

@@ -10,10 +10,13 @@ import { toast } from "react-hot-toast";
 interface StudentInvitation {
   id: string;
   student_email: string;
+  first_name: string;
+  last_name: string;
   status: string;
   exam_id?: string;
   expires_at: string;
   created_at: string;
+  accepted_at?: string;
 }
 
 interface TeacherInvitation {
@@ -514,16 +517,22 @@ export default function AdminPage() {
                       <thead className="bg-gray-50">
                         <tr>
                           <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                            Student Email
+                            Student Name
+                          </th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Email
                           </th>
                           <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                             Status
                           </th>
                           <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                            Exam
+                            Exam Status
                           </th>
                           <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                            Sent
+                            Invited
+                          </th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Expires
                           </th>
                         </tr>
                       </thead>
@@ -531,20 +540,26 @@ export default function AdminPage() {
                         {studentInvitations.map((invitation) => (
                           <tr key={invitation.id}>
                             <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                              {invitation.first_name} {invitation.last_name}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                               {invitation.student_email}
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap">
                               {getStatusBadge(invitation.status)}
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                              {invitation.exam_id
-                                ? "Specific Exam"
-                                : "General Access"}
+                              {invitation.exam_id ? "Not Completed" : "No Exam"}
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                               {new Date(
                                 invitation.created_at
-                              ).toLocaleDateString()}
+                              ).toLocaleDateString("en-GB")}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                              {new Date(
+                                invitation.expires_at
+                              ).toLocaleDateString("en-GB")}
                             </td>
                           </tr>
                         ))}

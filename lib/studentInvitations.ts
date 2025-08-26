@@ -493,7 +493,8 @@ export async function resendStudentInvitation(
     }
 
     // Resend email
-    const firstName = invitation.first_name || invitation.student_email.split("@")[0]; // Use stored name or fallback
+    const firstName =
+      invitation.first_name || invitation.student_email.split("@")[0];
     await sendStudentInvitationEmail(
       invitation.student_email,
       firstName,

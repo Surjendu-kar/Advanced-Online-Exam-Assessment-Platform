@@ -1,6 +1,6 @@
 // lib/studentInvitations.ts
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { StudentInvitation } from "@/types/database";
+import { StudentInvitation, UserProfile } from "@/types/database";
 import nodemailer from "nodemailer";
 
 export interface CreateStudentInvitationData {

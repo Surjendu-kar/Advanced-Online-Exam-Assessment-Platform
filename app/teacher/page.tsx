@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { supabase } from "@/lib/supabaseClient";
 import { toast } from "react-hot-toast";
+import ExamCreateModal from "@/components/ui/ExamCreateModal";
 
 interface StudentInvitation {
   id: string;
@@ -18,6 +19,18 @@ interface StudentInvitation {
   created_at: string;
 }
 
+interface Exam {
+  id: string;
+  title: string;
+  description?: string;
+  unique_code: string;
+  start_time?: string;
+  end_time?: string;
+  created_at: string;
+  access_type: string;
+  max_attempts: number;
+}
+
 export default function TeacherPage() {
   const { user, loading, logout } = useAuth();
   const router = useRouter();
@@ -28,13 +41,19 @@ export default function TeacherPage() {
   const [studentLastName, setStudentLastName] = useState("");
   const [studentExpiryDate, setStudentExpiryDate] = useState("");
   const [studentSubmitting, setStudentSubmitting] = useState(false);
-  const [showInviteForm, setShowInviteForm] = useState(false);
+
+  // Exam creation states
+  const [showCreateModal, setShowCreateModal] = useState(false);
 
   // Data states
   const [studentInvitations, setStudentInvitations] = useState<
     StudentInvitation[]
   >([]);
+  const [exams, setExams] = useState<Exam[]>([]);
   const [loadingData, setLoadingData] = useState(true);
+
+  // Tab state
+  const [activeTab, setActiveTab] = useState<"exams" | "students">("exams");
 
   useEffect(() => {
     if (!loading && (!user || user.profile?.role !== "teacher")) {
@@ -49,6 +68,18 @@ export default function TeacherPage() {
       const session = await supabase.auth.getSession();
       if (!session.data.session) return;
 
+      // Fetch exams
+      const examRes = await fetch("/api/exams", {
+        headers: {
+          Authorization: `Bearer ${session.data.session.access_token}`,
+        },
+      });
+      if (examRes.ok) {
+        const examData = await examRes.json();
+        setExams(examData.exams || []);
+      }
+
+      // Fetch student invitations
       const studentRes = await fetch("/api/students", {
         headers: {
           Authorization: `Bearer ${session.data.session.access_token}`,
@@ -86,51 +117,11 @@ export default function TeacherPage() {
   };
 
   const handleStudentInvite = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setStudentSubmitting(true);
+    // ... existing code ...
+  };
 
-    try {
-      const session = await supabase.auth.getSession();
-      if (!session.data.session) {
-        toast.error("Not authenticated");
-        setStudentSubmitting(false);
-        return;
-      }
-
-      const res = await fetch("/api/students", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${session.data.session.access_token}`,
-        },
-        body: JSON.stringify({
-          email: studentEmail,
-          firstName: studentFirstName,
-          lastName: studentLastName,
-          expiresAt: studentExpiryDate || undefined,
-        }),
-      });
-
-      const data = await res.json();
-      if (!res.ok) {
-        toast.error(data.error || "Failed to invite student");
-      } else {
-        toast.success(
-          `Student invited successfully! Invitation sent to ${studentEmail}`
-        );
-        setStudentEmail("");
-        setStudentFirstName("");
-        setStudentLastName("");
-        setStudentExpiryDate("");
-        setShowInviteForm(false);
-        fetchData();
-      }
-    } catch (err) {
-      console.error(err);
-      toast.error("Something went wrong. Please try again.");
-    } finally {
-      setStudentSubmitting(false);
-    }
+  const handleExamCreationSuccess = () => {
+    fetchData(); // Refresh the exams list
   };
 
   const getStatusBadge = (status: string) => {
@@ -195,188 +186,310 @@ export default function TeacherPage() {
                 Create exams, invite students, and manage assessments
               </p>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-6xl mx-auto">
-                <div className="bg-white p-6 rounded-lg shadow">
-                  <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                    Create Exam
-                  </h3>
-                  <p className="text-gray-600 mb-4">
-                    Create new exams with questions
-                  </p>
-                  <Button className="w-full">New Exam</Button>
-                </div>
-
-                <div className="bg-white p-6 rounded-lg shadow">
-                  <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                    My Exams
-                  </h3>
-                  <p className="text-gray-600 mb-4">
-                    View and manage your exams
-                  </p>
-                  <Button className="w-full">View Exams</Button>
-                </div>
-
-                <div className="bg-white p-6 rounded-lg shadow">
-                  <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                    Invite Students
-                  </h3>
-                  <p className="text-gray-600 mb-4">
-                    Send exam invitations to students
-                  </p>
-                  <Button
-                    className="w-full"
-                    onClick={() => setShowInviteForm(!showInviteForm)}
+              {/* Tabs */}
+              <div className="mb-8">
+                <div className="flex space-x-1 bg-gray-100 p-1 rounded-lg max-w-md mx-auto">
+                  <button
+                    onClick={() => setActiveTab("exams")}
+                    className={`flex-1 px-4 py-2 text-sm font-medium rounded-md transition-colors ${
+                      activeTab === "exams"
+                        ? "bg-white text-gray-900 shadow-sm"
+                        : "text-gray-600 hover:text-gray-900"
+                    }`}
                   >
-                    {showInviteForm ? "Cancel" : "Invite Students"}
-                  </Button>
-                </div>
-
-                <div className="bg-white p-6 rounded-lg shadow">
-                  <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                    Results & Grading
-                  </h3>
-                  <p className="text-gray-600 mb-4">
-                    Review and grade exam results
-                  </p>
-                  <Button className="w-full">View Results</Button>
+                    My Exams ({exams.length})
+                  </button>
+                  <button
+                    onClick={() => setActiveTab("students")}
+                    className={`flex-1 px-4 py-2 text-sm font-medium rounded-md transition-colors ${
+                      activeTab === "students"
+                        ? "bg-white text-gray-900 shadow-sm"
+                        : "text-gray-600 hover:text-gray-900"
+                    }`}
+                  >
+                    Students ({studentInvitations.length})
+                  </button>
                 </div>
               </div>
 
-              {/* Student Invitation Form */}
-              {showInviteForm && (
-                <div className="mt-8 bg-white p-6 rounded-lg shadow max-w-lg mx-auto">
-                  <h3 className="text-lg font-semibold text-gray-900 mb-4">
-                    Invite a Student
-                  </h3>
-                  <form onSubmit={handleStudentInvite} className="space-y-4">
-                    <input
-                      type="email"
-                      required
-                      placeholder="Student Email"
-                      value={studentEmail}
-                      onChange={(e) => setStudentEmail(e.target.value)}
-                      className="w-full border border-gray-300 p-3 rounded-md placeholder-gray-400 text-black focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                      disabled={studentSubmitting}
-                    />
-                    <input
-                      type="text"
-                      required
-                      placeholder="First Name"
-                      value={studentFirstName}
-                      onChange={(e) => setStudentFirstName(e.target.value)}
-                      className="w-full border border-gray-300 p-3 rounded-md placeholder-gray-400 text-black focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                      disabled={studentSubmitting}
-                    />
-                    <input
-                      type="text"
-                      required
-                      placeholder="Last Name"
-                      value={studentLastName}
-                      onChange={(e) => setStudentLastName(e.target.value)}
-                      className="w-full border border-gray-300 p-3 rounded-md placeholder-gray-400 text-black focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                      disabled={studentSubmitting}
-                    />
-                    <div className="space-y-2">
-                      <label className="block text-sm font-medium text-gray-700">
-                        Expiry Date (Optional)
-                      </label>
-                      <input
-                        type="date"
-                        placeholder="Expiry Date (Optional)"
-                        value={studentExpiryDate}
-                        onChange={(e) => setStudentExpiryDate(e.target.value)}
-                        className="w-full border border-gray-300 p-3 rounded-md placeholder-gray-400 text-black focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                        disabled={studentSubmitting}
-                        min={new Date().toISOString().split("T")[0]}
-                      />
-                      <p className="text-xs text-gray-500">
-                        If not specified, invitation will expire in 2 days
-                      </p>
+              {/* Exams Tab */}
+              {activeTab === "exams" && (
+                <div className="space-y-8">
+                  <div className="bg-white p-6 rounded-lg shadow max-w-lg mx-auto">
+                    <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                      Quick Actions
+                    </h3>
+                    <div className="space-y-3">
+                      <Button
+                        className="w-full"
+                        onClick={() => setShowCreateModal(true)}
+                      >
+                        Create New Exam
+                      </Button>
+                      <Button variant="outline" className="w-full">
+                        Import Questions
+                      </Button>
                     </div>
-                    <Button
-                      type="submit"
-                      className="w-full"
-                      loading={studentSubmitting}
-                      disabled={studentSubmitting}
-                    >
-                      {studentSubmitting
-                        ? "Sending Invitation..."
-                        : "Invite Student"}
-                    </Button>
-                  </form>
+                  </div>
+
+                  {/* Exams List */}
+                  <div className="bg-white rounded-lg shadow overflow-hidden">
+                    <div className="px-6 py-4 border-b border-gray-200">
+                      <h3 className="text-lg font-semibold text-gray-900">
+                        My Exams
+                      </h3>
+                    </div>
+                    <div className="overflow-x-auto">
+                      {loadingData ? (
+                        <div className="p-6 text-center text-gray-500">
+                          Loading exams...
+                        </div>
+                      ) : exams.length === 0 ? (
+                        <div className="p-6 text-center text-gray-500">
+                          No exams created yet. Create your first exam to get
+                          started.
+                        </div>
+                      ) : (
+                        <table className="min-w-full divide-y divide-gray-200">
+                          <thead className="bg-gray-50">
+                            <tr>
+                              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Exam Title
+                              </th>
+                              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Code
+                              </th>
+                              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Schedule
+                              </th>
+                              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Questions
+                              </th>
+                              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Created
+                              </th>
+                              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Actions
+                              </th>
+                            </tr>
+                          </thead>
+                          <tbody className="bg-white divide-y divide-gray-200">
+                            {exams.map((exam) => (
+                              <tr key={exam.id}>
+                                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                                  {exam.title}
+                                </td>
+                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                  <code className="bg-gray-100 px-2 py-1 rounded">
+                                    {exam.unique_code}
+                                  </code>
+                                </td>
+                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                  {exam.start_time ? (
+                                    <div>
+                                      <div>
+                                        {new Date(
+                                          exam.start_time
+                                        ).toLocaleDateString("en-GB")}
+                                      </div>
+                                      <div className="text-xs text-gray-400">
+                                        {new Date(
+                                          exam.start_time
+                                        ).toLocaleTimeString("en-GB", {
+                                          hour: "2-digit",
+                                          minute: "2-digit",
+                                        })}
+                                      </div>
+                                    </div>
+                                  ) : (
+                                    <span className="text-gray-400">
+                                      Not scheduled
+                                    </span>
+                                  )}
+                                </td>
+                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                  <span className="text-gray-400">-</span>
+                                </td>
+                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                  {new Date(exam.created_at).toLocaleDateString(
+                                    "en-GB"
+                                  )}
+                                </td>
+                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                  <div className="flex space-x-2">
+                                    <Button
+                                      variant="outline"
+                                      className="text-xs px-2 py-1"
+                                    >
+                                      Edit
+                                    </Button>
+                                    <Button
+                                      variant="outline"
+                                      className="text-xs px-2 py-1"
+                                      onClick={() =>
+                                        router.push(
+                                          `/exam-questions/${exam.id}`
+                                        )
+                                      }
+                                    >
+                                      Questions
+                                    </Button>
+                                  </div>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      )}
+                    </div>
+                  </div>
                 </div>
               )}
 
-              {/* Student Invitations List */}
-              <div className="mt-8 bg-white rounded-lg shadow overflow-hidden">
-                <div className="px-6 py-4 border-b border-gray-200">
-                  <h3 className="text-lg font-semibold text-gray-900 ">
-                    Student Invitations
-                  </h3>
-                </div>
-                <div className="overflow-x-auto">
-                  {loadingData ? (
-                    <div className="p-6 text-center text-gray-500">
-                      Loading invitations...
+              {/* Students Tab */}
+              {activeTab === "students" && (
+                <div className="space-y-8">
+                  <div className="bg-white p-6 rounded-lg shadow max-w-lg mx-auto">
+                    <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                      Invite a Student
+                    </h3>
+                    <form onSubmit={handleStudentInvite} className="space-y-4">
+                      <input
+                        type="email"
+                        required
+                        placeholder="Student Email"
+                        value={studentEmail}
+                        onChange={(e) => setStudentEmail(e.target.value)}
+                        className="w-full border border-gray-300 p-3 rounded-md placeholder-gray-400 text-black focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        disabled={studentSubmitting}
+                      />
+                      <input
+                        type="text"
+                        required
+                        placeholder="First Name"
+                        value={studentFirstName}
+                        onChange={(e) => setStudentFirstName(e.target.value)}
+                        className="w-full border border-gray-300 p-3 rounded-md placeholder-gray-400 text-black focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        disabled={studentSubmitting}
+                      />
+                      <input
+                        type="text"
+                        required
+                        placeholder="Last Name"
+                        value={studentLastName}
+                        onChange={(e) => setStudentLastName(e.target.value)}
+                        className="w-full border border-gray-300 p-3 rounded-md placeholder-gray-400 text-black focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        disabled={studentSubmitting}
+                      />
+                      <div className="space-y-2">
+                        <label className="block text-sm font-medium text-gray-700">
+                          Expiry Date (Optional)
+                        </label>
+                        <input
+                          type="date"
+                          placeholder="Expiry Date (Optional)"
+                          value={studentExpiryDate}
+                          onChange={(e) => setStudentExpiryDate(e.target.value)}
+                          className="w-full border border-gray-300 p-3 rounded-md placeholder-gray-400 text-black focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                          disabled={studentSubmitting}
+                          min={new Date().toISOString().split("T")[0]}
+                        />
+                        <p className="text-xs text-gray-500">
+                          If not specified, invitation will expire in 2 days
+                        </p>
+                      </div>
+                      <Button
+                        type="submit"
+                        className="w-full"
+                        loading={studentSubmitting}
+                        disabled={studentSubmitting}
+                      >
+                        {studentSubmitting
+                          ? "Sending Invitation..."
+                          : "Invite Student"}
+                      </Button>
+                    </form>
+                  </div>
+
+                  {/* Student Invitations List */}
+                  <div className="bg-white rounded-lg shadow overflow-hidden">
+                    <div className="px-6 py-4 border-b border-gray-200">
+                      <h3 className="text-lg font-semibold text-gray-900">
+                        Student Invitations
+                      </h3>
                     </div>
-                  ) : studentInvitations.length === 0 ? (
-                    <div className="p-6 text-center text-gray-500">
-                      No student invitations yet
+                    <div className="overflow-x-auto">
+                      {loadingData ? (
+                        <div className="p-6 text-center text-gray-500">
+                          Loading invitations...
+                        </div>
+                      ) : studentInvitations.length === 0 ? (
+                        <div className="p-6 text-center text-gray-500">
+                          No student invitations yet
+                        </div>
+                      ) : (
+                        <table className="min-w-full divide-y divide-gray-200">
+                          <thead className="bg-gray-50">
+                            <tr>
+                              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Student Name
+                              </th>
+                              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Email
+                              </th>
+                              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Status
+                              </th>
+                              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Invited
+                              </th>
+                              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Expires
+                              </th>
+                            </tr>
+                          </thead>
+                          <tbody className="bg-white divide-y divide-gray-200">
+                            {studentInvitations.map((invitation) => (
+                              <tr key={invitation.id}>
+                                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                                  {invitation.first_name} {invitation.last_name}
+                                </td>
+                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                  {invitation.student_email}
+                                </td>
+                                <td className="px-6 py-4 whitespace-nowrap">
+                                  {getStatusBadge(invitation.status)}
+                                </td>
+                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                  {new Date(
+                                    invitation.created_at
+                                  ).toLocaleDateString("en-GB")}
+                                </td>
+                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                  {new Date(
+                                    invitation.expires_at
+                                  ).toLocaleDateString("en-GB")}
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      )}
                     </div>
-                  ) : (
-                    <table className="min-w-full divide-y divide-gray-200">
-                      <thead className="bg-gray-50">
-                        <tr>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                            Student Name
-                          </th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                            Email
-                          </th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                            Status
-                          </th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                            Invited
-                          </th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                            Expires
-                          </th>
-                        </tr>
-                      </thead>
-                      <tbody className="bg-white divide-y divide-gray-200">
-                        {studentInvitations.map((invitation) => (
-                          <tr key={invitation.id}>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-left   font-medium text-gray-900">
-                              {invitation.first_name} {invitation.last_name}
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-left  text-gray-500">
-                              {invitation.student_email}
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-left ">
-                              {getStatusBadge(invitation.status)}
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-left  text-gray-500">
-                              {new Date(
-                                invitation.created_at
-                              ).toLocaleDateString("en-GB")}
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-left  text-gray-500">
-                              {new Date(
-                                invitation.expires_at
-                              ).toLocaleDateString("en-GB")}
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  )}
+                  </div>
                 </div>
-              </div>
+              )}
             </div>
           </div>
         </div>
       </main>
+
+      {/* Exam Creation Modal */}
+      <ExamCreateModal
+        isOpen={showCreateModal}
+        onClose={() => setShowCreateModal(false)}
+        onSuccess={handleExamCreationSuccess}
+      />
     </div>
   );
 }

@@ -596,38 +596,30 @@ export default function ExamCreateModal({
 
         <div className="flex-1 overflow-y-auto px-4 py-2">
           {step === 1 && (
-            <div className="flex flex-col h-full gap-2">
-              <div className="space-y-4 flex flex-col py-2">
-                <input
-                  type="text"
-                  required
-                  placeholder="Exam Title"
-                  value={examTitle}
-                  onChange={(e) => setExamTitle(e.target.value)}
-                  className="w-full border border-gray-300 p-3 rounded-md placeholder-gray-400 text-black focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                />
-                <textarea
-                  placeholder="Exam Description (Optional)"
-                  value={examDescription}
-                  onChange={(e) => setExamDescription(e.target.value)}
-                  rows={3}
-                  className="w-full border border-gray-300 p-3 rounded-md placeholder-gray-400 text-black focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                />
-              </div>
-
-              <div className="flex justify-end mt-auto">
-                <Button onClick={() => setStep(2)} disabled={!examTitle.trim()}>
-                  Next: Add Questions
-                </Button>
-              </div>
+            <div className="space-y-4 py-2">
+              <input
+                type="text"
+                required
+                placeholder="Exam Title"
+                value={examTitle}
+                onChange={(e) => setExamTitle(e.target.value)}
+                className="w-full border border-gray-300 p-3 rounded-md placeholder-gray-400 text-black focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              />
+              <textarea
+                placeholder="Exam Description (Optional)"
+                value={examDescription}
+                onChange={(e) => setExamDescription(e.target.value)}
+                rows={3}
+                className="w-full border border-gray-300 p-3 rounded-md placeholder-gray-400 text-black focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              />
             </div>
           )}
 
           {step === 2 && (
-            <div className="space-y-6 flex flex-col h-full ">
+            <div className="space-y-6">
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 px-6 pt-4">
                 {/* Left Side - Question Type, Add Button, and Question Forms */}
-                <div className="space-y-4">
+                <div className="space-y-4 sticky top-4 self-start">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       Question Type
@@ -874,7 +866,7 @@ export default function ExamCreateModal({
                           started.
                         </div>
                       ) : (
-                        <div className="space-y-3 max-h-96 overflow-y-auto">
+                        <div className="space-y-3">
                           {questions.map((question, index) => (
                             <QuestionAccordion
                               key={question.id}
@@ -900,25 +892,38 @@ export default function ExamCreateModal({
                   )}
                 </div>
               </div>
+            </div>
+          )}
+        </div>
 
-              <div className="px-6 py-3 flex mt-auto justify-end space-x-3  border-t border-gray-200">
-                <Button
-                  variant="outline"
-                  onClick={() => {
-                    onClose();
-                    resetModal();
-                  }}
-                >
-                  Cancel
-                </Button>
-                <Button
-                  onClick={createExam}
-                  loading={submitting}
-                  disabled={submitting || questions.length === 0}
-                >
-                  {submitting ? "Creating Exam..." : "Create Exam"}
-                </Button>
-              </div>
+        {/* Fixed bottom buttons */}
+        <div className="px-6 py-4 border-t border-gray-200 bg-white">
+          {step === 1 && (
+            <div className="flex justify-end">
+              <Button onClick={() => setStep(2)} disabled={!examTitle.trim()}>
+                Next: Add Questions
+              </Button>
+            </div>
+          )}
+
+          {step === 2 && (
+            <div className="flex justify-end space-x-3">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  onClose();
+                  resetModal();
+                }}
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={createExam}
+                loading={submitting}
+                disabled={submitting || questions.length === 0}
+              >
+                {submitting ? "Creating Exam..." : "Create Exam"}
+              </Button>
             </div>
           )}
         </div>

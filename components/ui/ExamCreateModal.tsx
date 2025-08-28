@@ -672,7 +672,7 @@ export default function ExamCreateModal({
 
           {step === 2 && (
             <div className="space-y-6 h-full overflow-hidden">
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 px-3 pt-4 h-full">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 pl-3 pt-4 h-full">
                 {/* Left Side - Question Type, Add Button, and Question Forms */}
                 <div className="space-y-4 sticky top-0 self-start h-fit max-h-[calc(85vh-200px)] pb-4 overflow-y-auto min-w-0 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
                   <div>

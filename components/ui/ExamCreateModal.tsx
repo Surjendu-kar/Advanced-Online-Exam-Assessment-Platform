@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { motion } from "motion/react";
 import { Button } from "@/components/ui/Button";
 import { supabase } from "@/lib/supabaseClient";
 import { toast } from "react-hot-toast";
@@ -28,22 +29,26 @@ interface QuestionAccordionProps {
   isDropTarget: boolean;
   isOpen: boolean;
   onToggle: (questionId: string) => void;
+  isDeleteMode: boolean;
+  isSelected: boolean;
+  onToggleSelection: (questionId: string) => void;
 }
 
 function QuestionAccordion({
   question,
   index,
-  totalQuestions,
   onDragStart,
   onDragOver,
   onDrop,
   onDragEnd,
-  onRemove,
   onUpdate,
   isDragging,
   isDropTarget,
   isOpen,
   onToggle,
+  isDeleteMode,
+  isSelected,
+  onToggleSelection,
 }: QuestionAccordionProps) {
   const [editData, setEditData] = useState(question.data);
 
@@ -74,262 +79,288 @@ function QuestionAccordion({
   };
 
   return (
-    <div
-      className={`border rounded-lg transition-all duration-200 ${
-        isDragging
-          ? "opacity-50 transform scale-95 border-blue-300"
-          : isDropTarget
-          ? "border-blue-400 bg-blue-50"
-          : "border-gray-200"
-      }`}
-      onDragOver={handleDragOver}
-      onDragLeave={handleDragLeave}
-      onDrop={handleDrop}
-    >
-      <div
-        className="p-3 cursor-pointer hover:bg-gray-50 transition-colors duration-200"
-        onClick={() => onToggle(question.id)}
-      >
-        <div className="flex justify-between items-start">
-          <div className="flex items-center space-x-2">
-            <span className="text-sm font-medium text-gray-900">
-              Q{question.order}
-            </span>
-            <span className="text-xs bg-gray-100 text-gray-700 px-2 py-1 rounded">
-              {question.type.toUpperCase()}
-            </span>
-            <span className="text-xs text-blue-600 font-medium">
-              {question.marks} point{question.marks !== 1 ? "s" : ""}
-            </span>
-          </div>
-          <div
-            className="flex items-center space-x-2"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <svg
-              className={`w-4 h-4 text-gray-400 transition-transform duration-300 ease-in-out ${
-                isOpen ? "rotate-180" : "rotate-0"
-              }`}
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M19 9l-7 7-7-7"
-              />
-            </svg>
-            <button
-              draggable
-              onDragStart={handleDragStart}
-              onDragEnd={onDragEnd}
-              className="text-gray-400 hover:text-gray-600 cursor-move hover:bg-gray-100 rounded p-1 transition-colors duration-200"
-              title="Drag to reorder"
-            >
-              ⋮⋮
-            </button>
-            <button
-              onClick={onRemove}
-              className="text-red-400 hover:text-red-600 rounded text-lg p-1 hover:bg-red-50 transition-colors duration-200"
-              title="Remove question"
-            >
-              ×
-            </button>
-          </div>
-        </div>
-        {!isOpen && (
-          <p className="text-sm text-gray-700 line-clamp-2 mt-2">
-            {question.question_text}
-          </p>
-        )}
-      </div>
-
-      <div
-        className={`border-t border-gray-200 bg-gray-50 transition-all duration-300 ease-in-out overflow-hidden ${
-          isOpen ? "max-h-screen opacity-100" : "max-h-0 opacity-0"
+    <div className="flex items-start space-x-3">
+      {isDeleteMode && (
+        <motion.div
+          initial={{ opacity: 0, x: -20 }}
+          animate={{ opacity: 1, x: 0 }}
+          exit={{ opacity: 0, x: -20 }}
+          transition={{ duration: 0.3 }}
+          className="mt-3"
+        >
+          <input
+            type="checkbox"
+            checked={isSelected}
+            onChange={() => onToggleSelection(question.id)}
+            className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+          />
+        </motion.div>
+      )}
+      <motion.div
+        layout
+        animate={{
+          paddingLeft: 0,
+        }}
+        transition={{
+          duration: 0.3,
+          ease: "easeInOut",
+        }}
+        className={`border rounded-lg transition-all duration-200 flex-1 ${
+          isDragging
+            ? "opacity-50 transform scale-95 border-blue-300"
+            : isDropTarget
+            ? "border-blue-400 bg-blue-50"
+            : isSelected
+            ? "border-blue-500 bg-blue-50"
+            : "border-gray-200"
         }`}
+        onDragOver={handleDragOver}
+        onDragLeave={handleDragLeave}
+        onDrop={handleDrop}
       >
         <div
-          className={`p-3 transition-all duration-300 ease-in-out ${
-            isOpen ? "opacity-100 translate-y-0" : "opacity-0 -translate-y-2"
-          }`}
+          className="p-3 cursor-pointer hover:bg-gray-50 transition-colors duration-200"
+          onClick={() => onToggle(question.id)}
         >
-          {question.type === "mcq" && (
-            <div className="space-y-3">
-              <textarea
-                placeholder="Enter question text..."
-                value={editData.question_text}
-                onChange={(e) =>
-                  setEditData({ ...editData, question_text: e.target.value })
-                }
-                rows={2}
-                className="w-full border border-gray-300 p-2 rounded-md placeholder-gray-400 text-black focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
-              />
-              {editData.options?.map((option: string, optIndex: number) => (
-                <div key={optIndex} className="flex items-center space-x-2">
-                  <input
-                    placeholder={`Option ${optIndex + 1}`}
-                    value={option}
-                    onChange={(e) => {
-                      const newOptions = [...editData.options];
-                      newOptions[optIndex] = e.target.value;
-                      setEditData({ ...editData, options: newOptions });
-                    }}
-                    className="flex-1 border border-gray-300 p-2 rounded-md placeholder-gray-400 text-black focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
-                  />
-                  <input
-                    type="radio"
-                    name="correct_option"
-                    checked={editData.correct_option === optIndex}
-                    onChange={() =>
-                      setEditData({ ...editData, correct_option: optIndex })
-                    }
-                    className="w-4 h-4 text-blue-600"
-                  />
-                </div>
-              ))}
-              <input
-                type="number"
-                min="1"
-                max="100"
-                placeholder="Points"
-                value={editData.marks}
-                onChange={(e) =>
-                  setEditData({
-                    ...editData,
-                    marks: parseInt(e.target.value) || 1,
-                  })
-                }
-                className="w-full border border-gray-300 p-2 rounded-md placeholder-gray-400 text-black focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
-              />
-              <button
-                onClick={() => {
-                  onUpdate(question.id, editData);
-                  onToggle(question.id);
-                }}
-                className="w-full bg-blue-600 text-white p-2 rounded-md hover:bg-blue-700 text-sm"
-              >
-                Update Question
-              </button>
+          <div className="flex justify-between items-start">
+            <div className="flex items-center space-x-2">
+              <span className="text-sm font-medium text-gray-900">
+                Q{question.order}
+              </span>
+              <span className="text-xs bg-gray-100 text-gray-700 px-2 py-1 rounded">
+                {question.type.toUpperCase()}
+              </span>
+              <span className="text-xs text-blue-600 font-medium">
+                {question.marks} point{question.marks !== 1 ? "s" : ""}
+              </span>
             </div>
-          )}
-
-          {question.type === "saq" && (
-            <div className="space-y-3">
-              <textarea
-                placeholder="Enter question text..."
-                value={editData.question_text}
-                onChange={(e) =>
-                  setEditData({ ...editData, question_text: e.target.value })
-                }
-                rows={2}
-                className="w-full border border-gray-300 p-2 rounded-md placeholder-gray-400 text-black focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
-              />
-              <textarea
-                placeholder="Expected answer..."
-                value={editData.correct_answer}
-                onChange={(e) =>
-                  setEditData({ ...editData, correct_answer: e.target.value })
-                }
-                rows={2}
-                className="w-full border border-gray-300 p-2 rounded-md placeholder-gray-400 text-black focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
-              />
-              <input
-                type="number"
-                min="1"
-                max="100"
-                placeholder="Points"
-                value={editData.marks}
-                onChange={(e) =>
-                  setEditData({
-                    ...editData,
-                    marks: parseInt(e.target.value) || 1,
-                  })
-                }
-                className="w-full border border-gray-300 p-2 rounded-md placeholder-gray-400 text-black focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
-              />
-              <button
-                onClick={() => {
-                  onUpdate(question.id, editData);
-                  onToggle(question.id);
-                }}
-                className="w-full bg-blue-600 text-white p-2 rounded-md hover:bg-blue-700 text-sm"
+            <div
+              className="flex items-center space-x-2"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <svg
+                className={`w-4 h-4 text-gray-400 transition-transform duration-300 ease-in-out ${
+                  isOpen ? "rotate-180" : "rotate-0"
+                }`}
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
               >
-                Update Question
-              </button>
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M19 9l-7 7-7-7"
+                />
+              </svg>
+              {!isDeleteMode && (
+                <button
+                  draggable
+                  onDragStart={handleDragStart}
+                  onDragEnd={onDragEnd}
+                  className="text-gray-400 hover:text-gray-600 cursor-move hover:bg-gray-100 rounded p-1 transition-colors duration-200"
+                  title="Drag to reorder"
+                >
+                  ⋮⋮
+                </button>
+              )}
             </div>
-          )}
-
-          {question.type === "coding" && (
-            <div className="space-y-3">
-              <textarea
-                placeholder="Enter question text..."
-                value={editData.question_text}
-                onChange={(e) =>
-                  setEditData({ ...editData, question_text: e.target.value })
-                }
-                rows={2}
-                className="w-full border border-gray-300 p-2 rounded-md placeholder-gray-400 text-black focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
-              />
-              <select
-                value={editData.language}
-                onChange={(e) =>
-                  setEditData({ ...editData, language: e.target.value })
-                }
-                className="w-full border border-gray-300 p-2 rounded-md text-black focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
-              >
-                <option value="javascript">JavaScript</option>
-                <option value="python">Python</option>
-                <option value="java">Java</option>
-                <option value="cpp">C++</option>
-              </select>
-              <textarea
-                placeholder="Starter code (optional)..."
-                value={editData.starter_code}
-                onChange={(e) =>
-                  setEditData({ ...editData, starter_code: e.target.value })
-                }
-                rows={2}
-                className="w-full border border-gray-300 p-2 rounded-md placeholder-gray-400 text-black focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm font-mono"
-              />
-              <textarea
-                placeholder="Expected output..."
-                value={editData.expected_output}
-                onChange={(e) =>
-                  setEditData({ ...editData, expected_output: e.target.value })
-                }
-                rows={2}
-                className="w-full border border-gray-300 p-2 rounded-md placeholder-gray-400 text-black focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm font-mono"
-              />
-              <input
-                type="number"
-                min="1"
-                max="100"
-                placeholder="Points"
-                value={editData.marks}
-                onChange={(e) =>
-                  setEditData({
-                    ...editData,
-                    marks: parseInt(e.target.value) || 1,
-                  })
-                }
-                className="w-full border border-gray-300 p-2 rounded-md placeholder-gray-400 text-black focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
-              />
-              <button
-                onClick={() => {
-                  onUpdate(question.id, editData);
-                  onToggle(question.id);
-                }}
-                className="w-full bg-blue-600 text-white p-2 rounded-md hover:bg-blue-700 text-sm"
-              >
-                Update Question
-              </button>
-            </div>
+          </div>
+          {!isOpen && (
+            <p className="text-sm text-gray-700 line-clamp-2 mt-2">
+              {question.question_text}
+            </p>
           )}
         </div>
-      </div>
+
+        <div
+          className={`border-t border-gray-200 bg-gray-50 transition-all duration-300 ease-in-out overflow-hidden ${
+            isOpen ? "max-h-screen opacity-100" : "max-h-0 opacity-0"
+          }`}
+        >
+          <div
+            className={`p-3 transition-all duration-300 ease-in-out ${
+              isOpen ? "opacity-100 translate-y-0" : "opacity-0 -translate-y-2"
+            }`}
+          >
+            {question.type === "mcq" && (
+              <div className="space-y-3">
+                <textarea
+                  placeholder="Enter question text..."
+                  value={editData.question_text}
+                  onChange={(e) =>
+                    setEditData({ ...editData, question_text: e.target.value })
+                  }
+                  rows={2}
+                  className="w-full border border-gray-300 p-2 rounded-md placeholder-gray-400 text-black focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                />
+                {editData.options?.map((option: string, optIndex: number) => (
+                  <div key={optIndex} className="flex items-center space-x-2">
+                    <input
+                      placeholder={`Option ${optIndex + 1}`}
+                      value={option}
+                      onChange={(e) => {
+                        const newOptions = [...editData.options];
+                        newOptions[optIndex] = e.target.value;
+                        setEditData({ ...editData, options: newOptions });
+                      }}
+                      className="flex-1 border border-gray-300 p-2 rounded-md placeholder-gray-400 text-black focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                    />
+                    <input
+                      type="radio"
+                      name="correct_option"
+                      checked={editData.correct_option === optIndex}
+                      onChange={() =>
+                        setEditData({ ...editData, correct_option: optIndex })
+                      }
+                      className="w-4 h-4 text-blue-600"
+                    />
+                  </div>
+                ))}
+                <input
+                  type="number"
+                  min="1"
+                  max="100"
+                  placeholder="Points"
+                  value={editData.marks}
+                  onChange={(e) =>
+                    setEditData({
+                      ...editData,
+                      marks: parseInt(e.target.value) || 1,
+                    })
+                  }
+                  className="w-full border border-gray-300 p-2 rounded-md placeholder-gray-400 text-black focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                />
+                <button
+                  onClick={() => {
+                    onUpdate(question.id, editData);
+                    onToggle(question.id);
+                  }}
+                  className="w-full bg-blue-600 text-white p-2 rounded-md hover:bg-blue-700 text-sm"
+                >
+                  Update Question
+                </button>
+              </div>
+            )}
+
+            {question.type === "saq" && (
+              <div className="space-y-3">
+                <textarea
+                  placeholder="Enter question text..."
+                  value={editData.question_text}
+                  onChange={(e) =>
+                    setEditData({ ...editData, question_text: e.target.value })
+                  }
+                  rows={2}
+                  className="w-full border border-gray-300 p-2 rounded-md placeholder-gray-400 text-black focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                />
+                <textarea
+                  placeholder="Expected answer..."
+                  value={editData.correct_answer}
+                  onChange={(e) =>
+                    setEditData({ ...editData, correct_answer: e.target.value })
+                  }
+                  rows={2}
+                  className="w-full border border-gray-300 p-2 rounded-md placeholder-gray-400 text-black focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                />
+                <input
+                  type="number"
+                  min="1"
+                  max="100"
+                  placeholder="Points"
+                  value={editData.marks}
+                  onChange={(e) =>
+                    setEditData({
+                      ...editData,
+                      marks: parseInt(e.target.value) || 1,
+                    })
+                  }
+                  className="w-full border border-gray-300 p-2 rounded-md placeholder-gray-400 text-black focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                />
+                <button
+                  onClick={() => {
+                    onUpdate(question.id, editData);
+                    onToggle(question.id);
+                  }}
+                  className="w-full bg-blue-600 text-white p-2 rounded-md hover:bg-blue-700 text-sm"
+                >
+                  Update Question
+                </button>
+              </div>
+            )}
+
+            {question.type === "coding" && (
+              <div className="space-y-3">
+                <textarea
+                  placeholder="Enter question text..."
+                  value={editData.question_text}
+                  onChange={(e) =>
+                    setEditData({ ...editData, question_text: e.target.value })
+                  }
+                  rows={2}
+                  className="w-full border border-gray-300 p-2 rounded-md placeholder-gray-400 text-black focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                />
+                <select
+                  value={editData.language}
+                  onChange={(e) =>
+                    setEditData({ ...editData, language: e.target.value })
+                  }
+                  className="w-full border border-gray-300 p-2 rounded-md text-black focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                >
+                  <option value="javascript">JavaScript</option>
+                  <option value="python">Python</option>
+                  <option value="java">Java</option>
+                  <option value="cpp">C++</option>
+                </select>
+                <textarea
+                  placeholder="Starter code (optional)..."
+                  value={editData.starter_code}
+                  onChange={(e) =>
+                    setEditData({ ...editData, starter_code: e.target.value })
+                  }
+                  rows={2}
+                  className="w-full border border-gray-300 p-2 rounded-md placeholder-gray-400 text-black focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm font-mono"
+                />
+                <textarea
+                  placeholder="Expected output..."
+                  value={editData.expected_output}
+                  onChange={(e) =>
+                    setEditData({
+                      ...editData,
+                      expected_output: e.target.value,
+                    })
+                  }
+                  rows={2}
+                  className="w-full border border-gray-300 p-2 rounded-md placeholder-gray-400 text-black focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm font-mono"
+                />
+                <input
+                  type="number"
+                  min="1"
+                  max="100"
+                  placeholder="Points"
+                  value={editData.marks}
+                  onChange={(e) =>
+                    setEditData({
+                      ...editData,
+                      marks: parseInt(e.target.value) || 1,
+                    })
+                  }
+                  className="w-full border border-gray-300 p-2 rounded-md placeholder-gray-400 text-black focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                />
+                <button
+                  onClick={() => {
+                    onUpdate(question.id, editData);
+                    onToggle(question.id);
+                  }}
+                  className="w-full bg-blue-600 text-white p-2 rounded-md hover:bg-blue-700 text-sm"
+                >
+                  Update Question
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      </motion.div>
     </div>
   );
 }
@@ -359,6 +390,10 @@ export default function ExamCreateModal({
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
   const [showQuestionForm, setShowQuestionForm] = useState(false);
   const [openAccordionId, setOpenAccordionId] = useState<string | null>(null);
+  const [isDeleteMode, setIsDeleteMode] = useState(false);
+  const [selectedQuestions, setSelectedQuestions] = useState<Set<string>>(
+    new Set()
+  );
 
   const [mcqForm, setMcqForm] = useState({
     question_text: "",
@@ -500,6 +535,27 @@ export default function ExamCreateModal({
     setOpenAccordionId(openAccordionId === questionId ? null : questionId);
   };
 
+  const toggleDeleteMode = () => {
+    setIsDeleteMode(!isDeleteMode);
+    setSelectedQuestions(new Set());
+  };
+
+  const toggleQuestionSelection = (questionId: string) => {
+    const newSelected = new Set(selectedQuestions);
+    if (newSelected.has(questionId)) {
+      newSelected.delete(questionId);
+    } else {
+      newSelected.add(questionId);
+    }
+    setSelectedQuestions(newSelected);
+  };
+
+  const deleteSelectedQuestions = () => {
+    setQuestions(questions.filter((q) => !selectedQuestions.has(q.id)));
+    setSelectedQuestions(new Set());
+    setIsDeleteMode(false);
+  };
+
   const updateQuestion = (questionId: string, updatedData: any) => {
     setQuestions(
       questions.map((q) =>
@@ -620,10 +676,17 @@ export default function ExamCreateModal({
           scrollbar-gutter: stable;
         }
       `}</style>
-      <div
+      <motion.div
+        layout
         className={`bg-white rounded-2xl max-w-4xl w-full overflow-hidden shadow-xl flex flex-col ${
           step !== 1 ? "h-[85vh]" : "h-auto"
         }`}
+        transition={{
+          layout: {
+            duration: 0.3,
+            ease: "easeInOut",
+          },
+        }}
       >
         <div className="px-4 py-2  border-b border-gray-200">
           <div className="flex justify-between items-center">
@@ -912,9 +975,58 @@ export default function ExamCreateModal({
                     </div>
                   ) : (
                     <>
-                      <h4 className="font-medium text-gray-900">
-                        Questions ({questions.length} questions)
-                      </h4>
+                      <div className="flex justify-between items-center">
+                        <h4 className="font-medium text-gray-900">
+                          Questions ({questions.length} questions)
+                        </h4>
+                        <div className="flex items-center space-x-2">
+                          {isDeleteMode && selectedQuestions.size > 0 && (
+                            <motion.button
+                              initial={{ opacity: 0, scale: 0.8 }}
+                              animate={{ opacity: 1, scale: 1 }}
+                              exit={{ opacity: 0, scale: 0.8 }}
+                              onClick={deleteSelectedQuestions}
+                              className="bg-red-500 text-white px-3 py-1 rounded text-sm hover:bg-red-600 transition-colors"
+                            >
+                              Delete ({selectedQuestions.size})
+                            </motion.button>
+                          )}
+                          {isDeleteMode && (
+                            <motion.button
+                              initial={{ opacity: 0, scale: 0.8 }}
+                              animate={{ opacity: 1, scale: 1 }}
+                              exit={{ opacity: 0, scale: 0.8 }}
+                              onClick={toggleDeleteMode}
+                              className="bg-gray-500 text-white px-3 py-1 rounded text-sm hover:bg-gray-600 transition-colors"
+                            >
+                              Cancel
+                            </motion.button>
+                          )}
+                          <button
+                            onClick={toggleDeleteMode}
+                            className={`p-2 rounded-lg transition-colors duration-200 ${
+                              isDeleteMode
+                                ? "hidden"
+                                : "text-gray-400 hover:text-red-500 hover:bg-red-50"
+                            }`}
+                            title="Delete questions"
+                          >
+                            <svg
+                              className="w-4 h-4"
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                              />
+                            </svg>
+                          </button>
+                        </div>
+                      </div>
                       {questions.length === 0 ? (
                         <div className="text-center text-gray-500 py-8">
                           No questions added yet. Click "Add Question" to get
@@ -941,6 +1053,9 @@ export default function ExamCreateModal({
                               }
                               isOpen={openAccordionId === question.id}
                               onToggle={handleAccordionToggle}
+                              isDeleteMode={isDeleteMode}
+                              isSelected={selectedQuestions.has(question.id)}
+                              onToggleSelection={toggleQuestionSelection}
                             />
                           ))}
                         </div>
@@ -954,7 +1069,7 @@ export default function ExamCreateModal({
         </div>
 
         {/* Fixed bottom buttons */}
-        <div className="px-6 py-4 border-t border-gray-200 bg-white">
+        <div className="px-6 py-4 ">
           {step === 1 && (
             <div className="flex justify-end">
               <Button onClick={() => setStep(2)} disabled={!examTitle.trim()}>
@@ -984,7 +1099,7 @@ export default function ExamCreateModal({
             </div>
           )}
         </div>
-      </div>
+      </motion.div>
     </div>
   );
 }

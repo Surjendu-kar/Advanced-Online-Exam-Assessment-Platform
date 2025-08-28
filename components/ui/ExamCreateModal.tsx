@@ -26,6 +26,8 @@ interface QuestionAccordionProps {
   onUpdate: (questionId: string, updatedData: any) => void;
   isDragging: boolean;
   isDropTarget: boolean;
+  isOpen: boolean;
+  onToggle: (questionId: string) => void;
 }
 
 function QuestionAccordion({
@@ -40,8 +42,9 @@ function QuestionAccordion({
   onUpdate,
   isDragging,
   isDropTarget,
+  isOpen,
+  onToggle,
 }: QuestionAccordionProps) {
-  const [isOpen, setIsOpen] = useState(false);
   const [editData, setEditData] = useState(question.data);
 
   const handleDragStart = (e: React.DragEvent) => {
@@ -84,8 +87,8 @@ function QuestionAccordion({
       onDrop={handleDrop}
     >
       <div
-        className="p-3 cursor-pointer hover:bg-gray-50"
-        onClick={() => setIsOpen(!isOpen)}
+        className="p-3 cursor-pointer hover:bg-gray-50 transition-colors duration-200"
+        onClick={() => onToggle(question.id)}
       >
         <div className="flex justify-between items-start">
           <div className="flex items-center space-x-2">
@@ -99,19 +102,37 @@ function QuestionAccordion({
               {question.marks} point{question.marks !== 1 ? "s" : ""}
             </span>
           </div>
-          <div className="flex space-x-2" onClick={(e) => e.stopPropagation()}>
+          <div
+            className="flex items-center space-x-2"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <svg
+              className={`w-4 h-4 text-gray-400 transition-transform duration-300 ease-in-out ${
+                isOpen ? "rotate-180" : "rotate-0"
+              }`}
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M19 9l-7 7-7-7"
+              />
+            </svg>
             <button
               draggable
               onDragStart={handleDragStart}
               onDragEnd={onDragEnd}
-              className="text-gray-400 hover:text-gray-600 cursor-move hover:bg-gray-100 rounded"
+              className="text-gray-400 hover:text-gray-600 cursor-move hover:bg-gray-100 rounded p-1 transition-colors duration-200"
               title="Drag to reorder"
             >
               ⋮⋮
             </button>
             <button
               onClick={onRemove}
-              className="text-red-400 hover:text-red-600 rounded text-lg"
+              className="text-red-400 hover:text-red-600 rounded text-lg p-1 hover:bg-red-50 transition-colors duration-200"
               title="Remove question"
             >
               ×
@@ -125,8 +146,16 @@ function QuestionAccordion({
         )}
       </div>
 
-      {isOpen && (
-        <div className="border-t border-gray-200 p-3 bg-gray-50">
+      <div
+        className={`border-t border-gray-200 bg-gray-50 transition-all duration-300 ease-in-out overflow-hidden ${
+          isOpen ? "max-h-screen opacity-100" : "max-h-0 opacity-0"
+        }`}
+      >
+        <div
+          className={`p-3 transition-all duration-300 ease-in-out ${
+            isOpen ? "opacity-100 translate-y-0" : "opacity-0 -translate-y-2"
+          }`}
+        >
           {question.type === "mcq" && (
             <div className="space-y-3">
               <textarea
@@ -178,7 +207,7 @@ function QuestionAccordion({
               <button
                 onClick={() => {
                   onUpdate(question.id, editData);
-                  setIsOpen(false);
+                  onToggle(question.id);
                 }}
                 className="w-full bg-blue-600 text-white p-2 rounded-md hover:bg-blue-700 text-sm"
               >
@@ -224,7 +253,7 @@ function QuestionAccordion({
               <button
                 onClick={() => {
                   onUpdate(question.id, editData);
-                  setIsOpen(false);
+                  onToggle(question.id);
                 }}
                 className="w-full bg-blue-600 text-white p-2 rounded-md hover:bg-blue-700 text-sm"
               >
@@ -291,7 +320,7 @@ function QuestionAccordion({
               <button
                 onClick={() => {
                   onUpdate(question.id, editData);
-                  setIsOpen(false);
+                  onToggle(question.id);
                 }}
                 className="w-full bg-blue-600 text-white p-2 rounded-md hover:bg-blue-700 text-sm"
               >
@@ -300,7 +329,7 @@ function QuestionAccordion({
             </div>
           )}
         </div>
-      )}
+      </div>
     </div>
   );
 }
@@ -329,6 +358,7 @@ export default function ExamCreateModal({
   >(null);
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
   const [showQuestionForm, setShowQuestionForm] = useState(false);
+  const [openAccordionId, setOpenAccordionId] = useState<string | null>(null);
 
   const [mcqForm, setMcqForm] = useState({
     question_text: "",
@@ -466,6 +496,10 @@ export default function ExamCreateModal({
     setDragOverIndex(null);
   };
 
+  const handleAccordionToggle = (questionId: string) => {
+    setOpenAccordionId(openAccordionId === questionId ? null : questionId);
+  };
+
   const updateQuestion = (questionId: string, updatedData: any) => {
     setQuestions(
       questions.map((q) =>
@@ -565,6 +599,27 @@ export default function ExamCreateModal({
 
   return (
     <div className="fixed inset-0 bg-opacity-50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+      <style jsx>{`
+        .scrollbar-thin::-webkit-scrollbar {
+          width: 6px;
+        }
+        .scrollbar-thin::-webkit-scrollbar-track {
+          background: #f3f4f6;
+          border-radius: 3px;
+          margin: 4px;
+        }
+        .scrollbar-thin::-webkit-scrollbar-thumb {
+          background: #d1d5db;
+          border-radius: 3px;
+          margin: 2px;
+        }
+        .scrollbar-thin::-webkit-scrollbar-thumb:hover {
+          background: #9ca3af;
+        }
+        .scrollbar-thin {
+          scrollbar-gutter: stable;
+        }
+      `}</style>
       <div
         className={`bg-white rounded-2xl max-w-4xl w-full overflow-hidden shadow-xl flex flex-col ${
           step !== 1 ? "h-[85vh]" : "h-auto"
@@ -594,7 +649,7 @@ export default function ExamCreateModal({
           </div>
         </div>
 
-        <div className="flex-1 overflow-y-auto px-4 py-2">
+        <div className="flex-1 overflow-hidden px-4 py-2">
           {step === 1 && (
             <div className="space-y-4 py-2">
               <input
@@ -616,10 +671,10 @@ export default function ExamCreateModal({
           )}
 
           {step === 2 && (
-            <div className="space-y-6">
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 px-6 pt-4">
+            <div className="space-y-6 h-full overflow-hidden">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 px-3 pt-4 h-full">
                 {/* Left Side - Question Type, Add Button, and Question Forms */}
-                <div className="space-y-4 sticky top-4 self-start">
+                <div className="space-y-4 sticky top-0 self-start h-fit max-h-[calc(85vh-200px)] pb-4 overflow-y-auto min-w-0 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       Question Type
@@ -662,7 +717,7 @@ export default function ExamCreateModal({
                 </div>
 
                 {/* Right Side - Added Questions or Question Form */}
-                <div className="space-y-4">
+                <div className="space-y-4 pb-4 overflow-y-auto min-w-0 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100 pr-3">
                   {showQuestionForm ? (
                     <div className="bg-gray-50 p-4 rounded-lg space-y-4">
                       <h4 className="font-medium text-gray-900">
@@ -884,6 +939,8 @@ export default function ExamCreateModal({
                                 dragOverIndex === index &&
                                 draggedQuestionIndex !== index
                               }
+                              isOpen={openAccordionId === question.id}
+                              onToggle={handleAccordionToggle}
                             />
                           ))}
                         </div>

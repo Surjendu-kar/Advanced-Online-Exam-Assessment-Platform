@@ -92,7 +92,7 @@ export default function QuestionAccordion({
             type="checkbox"
             checked={isSelected}
             onChange={() => onToggleSelection(question.id)}
-            className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+            className="w-[15px] h-[15px] text-blue-600 border-gray-300 rounded focus:ring-blue-500"
           />
         </motion.div>
       )}
@@ -113,8 +113,8 @@ export default function QuestionAccordion({
           scale: 0.95,
         }}
         transition={{
-          duration: isNewlyAdded ? 0 : 0.2,
-          
+          duration: isNewlyAdded ? 0.1 : 0.2,
+          delay: isNewlyAdded ? 0.15 : 0,
         }}
         className={`border rounded-lg transition-all duration-200 flex-1 ${
           isDragging

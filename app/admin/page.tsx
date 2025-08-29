@@ -333,7 +333,7 @@ export default function AdminPage() {
                     placeholder="Teacher Email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    className="w-full border border-gray-300 p-3 rounded-md placeholder-gray-400 text-black focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full border border-gray-300 p-3 rounded-md placeholder-gray-400 text-black focus:ring-1 focus:ring-blue-500 focus:outline-none focus:border-transparent"
                     disabled={submitting}
                   />
                   <input
@@ -342,7 +342,7 @@ export default function AdminPage() {
                     placeholder="First Name"
                     value={firstName}
                     onChange={(e) => setFirstName(e.target.value)}
-                    className="w-full border border-gray-300 p-3 rounded-md placeholder-gray-400 text-black focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full border border-gray-300 p-3 rounded-md placeholder-gray-400 text-black focus:ring-1 focus:ring-blue-500 focus:outline-none focus:border-transparent"
                     disabled={submitting}
                   />
                   <input
@@ -351,7 +351,7 @@ export default function AdminPage() {
                     placeholder="Last Name"
                     value={lastName}
                     onChange={(e) => setLastName(e.target.value)}
-                    className="w-full border border-gray-300 p-3 rounded-md placeholder-gray-400 text-black focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full border border-gray-300 p-3 rounded-md placeholder-gray-400 text-black focus:ring-1 focus:ring-blue-500 focus:outline-none focus:border-transparent"
                     disabled={submitting}
                   />
                   <input
@@ -360,7 +360,7 @@ export default function AdminPage() {
                     placeholder="Institution"
                     value={institution}
                     onChange={(e) => setInstitution(e.target.value)}
-                    className="w-full border border-gray-300 p-3 rounded-md placeholder-gray-400 text-black focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full border border-gray-300 p-3 rounded-md placeholder-gray-400 text-black focus:ring-1 focus:ring-blue-500 focus:outline-none focus:border-transparent"
                     disabled={submitting}
                   />
                   <div className="space-y-2">
@@ -372,7 +372,7 @@ export default function AdminPage() {
                       placeholder="Expiry Date (Optional)"
                       value={expiryDate}
                       onChange={(e) => setExpiryDate(e.target.value)}
-                      className="w-full border border-gray-300 p-3 rounded-md placeholder-gray-400 text-black focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="w-full border border-gray-300 p-3 rounded-md placeholder-gray-400 text-black focus:ring-1 focus:ring-blue-500 focus:outline-none focus:border-transparent"
                       disabled={submitting}
                       min={new Date().toISOString().split("T")[0]}
                     />
@@ -483,7 +483,7 @@ export default function AdminPage() {
                     placeholder="Student Email"
                     value={studentEmail}
                     onChange={(e) => setStudentEmail(e.target.value)}
-                    className="w-full border border-gray-300 p-3 rounded-md placeholder-gray-400 text-black focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full border border-gray-300 p-3 rounded-md placeholder-gray-400 text-black focus:ring-1 focus:ring-blue-500 focus:outline-none focus:border-transparent"
                     disabled={studentSubmitting}
                   />
                   <input
@@ -492,7 +492,7 @@ export default function AdminPage() {
                     placeholder="First Name"
                     value={studentFirstName}
                     onChange={(e) => setStudentFirstName(e.target.value)}
-                    className="w-full border border-gray-300 p-3 rounded-md placeholder-gray-400 text-black focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full border border-gray-300 p-3 rounded-md placeholder-gray-400 text-black focus:ring-1 focus:ring-blue-500 focus:outline-none focus:border-transparent"
                     disabled={studentSubmitting}
                   />
                   <input
@@ -501,7 +501,7 @@ export default function AdminPage() {
                     placeholder="Last Name"
                     value={studentLastName}
                     onChange={(e) => setStudentLastName(e.target.value)}
-                    className="w-full border border-gray-300 p-3 rounded-md placeholder-gray-400 text-black focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full border border-gray-300 p-3 rounded-md placeholder-gray-400 text-black focus:ring-1 focus:ring-blue-500 focus:outline-none focus:border-transparent"
                     disabled={studentSubmitting}
                   />
                   <div className="space-y-2">
@@ -513,7 +513,7 @@ export default function AdminPage() {
                       placeholder="Expiry Date (Optional)"
                       value={studentExpiryDate}
                       onChange={(e) => setStudentExpiryDate(e.target.value)}
-                      className="w-full border border-gray-300 p-3 rounded-md placeholder-gray-400 text-black focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="w-full border border-gray-300 p-3 rounded-md placeholder-gray-400 text-black focus:ring-1 focus:ring-blue-500 focus:outline-none focus:border-transparent"
                       disabled={studentSubmitting}
                       min={new Date().toISOString().split("T")[0]}
                     />

@@ -21,14 +21,14 @@ export default function ExamBasicInfo({
         placeholder="Exam Title"
         value={examTitle}
         onChange={(e) => onTitleChange(e.target.value)}
-        className="w-full border border-gray-300 p-3 rounded-md placeholder-gray-400 text-black focus:ring-2 focus:ring-blue-500 focus:border-transparent focus:outline-none"
+        className="w-full border border-gray-300 p-3 rounded-md placeholder-gray-400 text-black bg-white focus:ring-1 focus:ring-blue-500 focus:border-transparent focus:outline-none"
       />
       <textarea
         placeholder="Exam Description (Optional)"
         value={examDescription}
         onChange={(e) => onDescriptionChange(e.target.value)}
         rows={3}
-        className="w-full border border-gray-300 p-3 rounded-md placeholder-gray-400 text-black focus:ring-2 focus:ring-blue-500 focus:border-transparent focus:outline-none"
+        className="w-full border border-gray-300 p-3 rounded-md placeholder-gray-400 text-black bg-white focus:ring-1 focus:ring-blue-500 focus:border-transparent focus:outline-none"
       />
     </div>
   );

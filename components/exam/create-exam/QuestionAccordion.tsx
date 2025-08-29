@@ -113,7 +113,7 @@ export default function QuestionAccordion({
           scale: 0.95,
         }}
         transition={{
-          duration: isNewlyAdded ? 0.3 : 0.2,
+          duration: isNewlyAdded ? 0 : 0.2,
           
         }}
         className={`border rounded-lg transition-all duration-200 flex-1 ${
@@ -215,7 +215,7 @@ export default function QuestionAccordion({
                     setEditData({ ...editData, question_text: e.target.value })
                   }
                   rows={2}
-                  className="w-full border border-gray-300 p-2 rounded-md placeholder-gray-400 text-black focus:ring-2 focus:ring-blue-500 focus:border-transparent focus:outline-none text-sm"
+                  className="w-full border border-gray-300 p-2 rounded-md placeholder-gray-400 text-black focus:ring-1 focus:ring-blue-500 focus:border-transparent focus:outline-none text-sm"
                 />
 
                 {/* MCQ options list */}
@@ -258,7 +258,7 @@ export default function QuestionAccordion({
                       marks: parseInt(e.target.value) || 1,
                     })
                   }
-                  className="w-full border border-gray-300 p-2 rounded-md placeholder-gray-400 text-black focus:ring-2 focus:ring-blue-500 focus:border-transparent focus:outline-none text-sm"
+                  className="w-full border border-gray-300 p-2 rounded-md placeholder-gray-400 text-black focus:ring-1 focus:ring-blue-500 focus:border-transparent focus:outline-none text-sm"
                 />
 
                 {/* Update button */}
@@ -285,7 +285,7 @@ export default function QuestionAccordion({
                     setEditData({ ...editData, question_text: e.target.value })
                   }
                   rows={2}
-                  className="w-full border border-gray-300 p-2 rounded-md placeholder-gray-400 text-black focus:ring-2 focus:ring-blue-500 focus:border-transparent focus:outline-none text-sm"
+                  className="w-full border border-gray-300 p-2 rounded-md placeholder-gray-400 text-black focus:ring-1 focus:ring-blue-500 focus:border-transparent focus:outline-none text-sm"
                 />
 
                 {/* Expected answer input */}
@@ -296,7 +296,7 @@ export default function QuestionAccordion({
                     setEditData({ ...editData, correct_answer: e.target.value })
                   }
                   rows={2}
-                  className="w-full border border-gray-300 p-2 rounded-md placeholder-gray-400 text-black focus:ring-2 focus:ring-blue-500 focus:border-transparent focus:outline-none text-sm"
+                  className="w-full border border-gray-300 p-2 rounded-md placeholder-gray-400 text-black focus:ring-1 focus:ring-blue-500 focus:border-transparent focus:outline-none text-sm"
                 />
 
                 {/* Points input */}
@@ -312,7 +312,7 @@ export default function QuestionAccordion({
                       marks: parseInt(e.target.value) || 1,
                     })
                   }
-                  className="w-full border border-gray-300 p-2 rounded-md placeholder-gray-400 text-black focus:ring-2 focus:ring-blue-500 focus:border-transparent focus:outline-none text-sm"
+                  className="w-full border border-gray-300 p-2 rounded-md placeholder-gray-400 text-black focus:ring-1 focus:ring-blue-500 focus:border-transparent focus:outline-none text-sm"
                 />
 
                 {/* Update button */}
@@ -339,7 +339,7 @@ export default function QuestionAccordion({
                     setEditData({ ...editData, question_text: e.target.value })
                   }
                   rows={2}
-                  className="w-full border border-gray-300 p-2 rounded-md placeholder-gray-400 text-black focus:ring-2 focus:ring-blue-500 focus:border-transparent focus:outline-none text-sm"
+                  className="w-full border border-gray-300 p-2 rounded-md placeholder-gray-400 text-black focus:ring-1 focus:ring-blue-500 focus:border-transparent focus:outline-none text-sm"
                 />
 
                 {/* Programming language selector */}
@@ -348,7 +348,7 @@ export default function QuestionAccordion({
                   onChange={(e) =>
                     setEditData({ ...editData, language: e.target.value })
                   }
-                  className="w-full border border-gray-300 p-2 rounded-md text-black focus:ring-2 focus:ring-blue-500 focus:border-transparent focus:outline-none text-sm"
+                  className="w-full border border-gray-300 p-2 rounded-md text-black focus:ring-1 focus:ring-blue-500 focus:border-transparent focus:outline-none text-sm"
                 >
                   <option value="javascript">JavaScript</option>
                   <option value="python">Python</option>
@@ -364,7 +364,7 @@ export default function QuestionAccordion({
                     setEditData({ ...editData, starter_code: e.target.value })
                   }
                   rows={2}
-                  className="w-full border border-gray-300 p-2 rounded-md placeholder-gray-400 text-black focus:ring-2 focus:ring-blue-500 focus:border-transparent focus:outline-none text-sm font-mono"
+                  className="w-full border border-gray-300 p-2 rounded-md placeholder-gray-400 text-black focus:ring-1 focus:ring-blue-500 focus:border-transparent focus:outline-none text-sm font-mono"
                 />
 
                 {/* Expected output input */}
@@ -378,7 +378,7 @@ export default function QuestionAccordion({
                     })
                   }
                   rows={2}
-                  className="w-full border border-gray-300 p-2 rounded-md placeholder-gray-400 text-black focus:ring-2 focus:ring-blue-500 focus:border-transparent focus:outline-none text-sm font-mono"
+                  className="w-full border border-gray-300 p-2 rounded-md placeholder-gray-400 text-black focus:ring-1 focus:ring-blue-500 focus:border-transparent focus:outline-none text-sm font-mono"
                 />
 
                 {/* Points input */}
@@ -394,7 +394,7 @@ export default function QuestionAccordion({
                       marks: parseInt(e.target.value) || 1,
                     })
                   }
-                  className="w-full border border-gray-300 p-2 rounded-md placeholder-gray-400 text-black focus:ring-2 focus:ring-blue-500 focus:border-transparent focus:outline-none text-sm"
+                  className="w-full border border-gray-300 p-2 rounded-md placeholder-gray-400 text-black focus:ring-1 focus:ring-blue-500 focus:border-transparent focus:outline-none text-sm"
                 />
 
                 {/* Update button */}

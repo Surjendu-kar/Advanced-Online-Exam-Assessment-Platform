@@ -293,7 +293,7 @@ export default function ExamQuestionsPage({
                           })
                         }
                         rows={3}
-                        className="w-full border border-gray-300 p-3 rounded-md placeholder-gray-400 text-black focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        className="w-full border border-gray-300 p-3 rounded-md placeholder-gray-400 text-black focus:ring-1 focus:ring-blue-500 focus:outline-none focus:border-transparent"
                         disabled={submitting}
                       />
                       {mcqForm.options.map((option, index) => (
@@ -307,7 +307,7 @@ export default function ExamQuestionsPage({
                             newOptions[index] = e.target.value;
                             setMcqForm({ ...mcqForm, options: newOptions });
                           }}
-                          className="w-full border border-gray-300 p-3 rounded-md placeholder-gray-400 text-black focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                          className="w-full border border-gray-300 p-3 rounded-md placeholder-gray-400 text-black focus:ring-1 focus:ring-blue-500 focus:outline-none focus:border-transparent"
                           disabled={submitting}
                         />
                       ))}
@@ -319,7 +319,7 @@ export default function ExamQuestionsPage({
                             correct_option: parseInt(e.target.value),
                           })
                         }
-                        className="w-full border border-gray-300 p-3 rounded-md text-black focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        className="w-full border border-gray-300 p-3 rounded-md text-black focus:ring-1 focus:ring-blue-500 focus:outline-none focus:border-transparent"
                         disabled={submitting}
                       >
                         <option value={0}>Option 1 (Correct)</option>
@@ -343,7 +343,7 @@ export default function ExamQuestionsPage({
                           })
                         }
                         rows={3}
-                        className="w-full border border-gray-300 p-3 rounded-md placeholder-gray-400 text-black focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        className="w-full border border-gray-300 p-3 rounded-md placeholder-gray-400 text-black focus:ring-1 focus:ring-blue-500 focus:outline-none focus:border-transparent"
                         disabled={submitting}
                       />
                       <textarea
@@ -357,7 +357,7 @@ export default function ExamQuestionsPage({
                           })
                         }
                         rows={2}
-                        className="w-full border border-gray-300 p-3 rounded-md placeholder-gray-400 text-black focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        className="w-full border border-gray-300 p-3 rounded-md placeholder-gray-400 text-black focus:ring-1 focus:ring-blue-500 focus:outline-none focus:border-transparent"
                         disabled={submitting}
                       />
                     </>
@@ -376,7 +376,7 @@ export default function ExamQuestionsPage({
                           })
                         }
                         rows={3}
-                        className="w-full border border-gray-300 p-3 rounded-md placeholder-gray-400 text-black focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        className="w-full border border-gray-300 p-3 rounded-md placeholder-gray-400 text-black focus:ring-1 focus:ring-blue-500 focus:outline-none focus:border-transparent"
                         disabled={submitting}
                       />
                       <select
@@ -387,7 +387,7 @@ export default function ExamQuestionsPage({
                             language: e.target.value,
                           })
                         }
-                        className="w-full border border-gray-300 p-3 rounded-md text-black focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        className="w-full border border-gray-300 p-3 rounded-md text-black focus:ring-1 focus:ring-blue-500 focus:outline-none focus:border-transparent"
                         disabled={submitting}
                       >
                         <option value="javascript">JavaScript</option>
@@ -405,7 +405,7 @@ export default function ExamQuestionsPage({
                           })
                         }
                         rows={4}
-                        className="w-full border border-gray-300 p-3 rounded-md placeholder-gray-400 text-black focus:ring-2 focus:ring-blue-500 focus:border-transparent font-mono"
+                        className="w-full border border-gray-300 p-3 rounded-md placeholder-gray-400 text-black focus:ring-1 focus:ring-blue-500 focus:outline-none focus:border-transparent font-mono"
                         disabled={submitting}
                       />
                       <textarea
@@ -419,7 +419,7 @@ export default function ExamQuestionsPage({
                           })
                         }
                         rows={2}
-                        className="w-full border border-gray-300 p-3 rounded-md placeholder-gray-400 text-black focus:ring-2 focus:ring-blue-500 focus:border-transparent font-mono"
+                        className="w-full border border-gray-300 p-3 rounded-md placeholder-gray-400 text-black focus:ring-1 focus:ring-blue-500 focus:outline-none focus:border-transparent font-mono"
                         disabled={submitting}
                       />
                     </>
@@ -447,7 +447,7 @@ export default function ExamQuestionsPage({
                         setCodingForm({ ...codingForm, marks });
                       }
                     }}
-                    className="w-full border border-gray-300 p-3 rounded-md placeholder-gray-400 text-black focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full border border-gray-300 p-3 rounded-md placeholder-gray-400 text-black focus:ring-1 focus:ring-blue-500 focus:outline-none focus:border-transparent"
                     disabled={submitting}
                   />
 

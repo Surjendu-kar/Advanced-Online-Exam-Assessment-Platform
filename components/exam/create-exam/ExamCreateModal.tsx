@@ -10,7 +10,6 @@ import ExamBasicInfo from "./ExamBasicInfo";
 import QuestionAccordion, { Question } from "./QuestionAccordion";
 import ExamModalFooter from "./ExamModalFooter";
 
-
 interface ExamCreateModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -141,13 +140,18 @@ export default function ExamCreateModal({
     setNewlyAddedQuestions(new Set([questionId]));
     setTimeout(() => {
       setNewlyAddedQuestions(new Set());
-    }, 300); // Slightly longer than animation duration
+    }, 0);
 
     toast.success("Question added!");
   };
 
   const removeQuestion = (id: string) => {
-    setQuestions(questions.filter((q) => q.id !== id));
+    const updatedQuestions = questions.filter((q) => q.id !== id);
+    // Update order numbers after deletion
+    updatedQuestions.forEach((q, i) => {
+      q.order = i + 1;
+    });
+    setQuestions(updatedQuestions);
   };
 
   const handleDragStart = (index: number) => {
@@ -220,7 +224,12 @@ export default function ExamCreateModal({
       }, 250); // Allow time for exit animations
     } else {
       // Normal deletion for partial selection
-      setQuestions(questions.filter((q) => !selectedQuestions.has(q.id)));
+      const updatedQuestions = questions.filter((q) => !selectedQuestions.has(q.id));
+      // Update order numbers after deletion
+      updatedQuestions.forEach((q, i) => {
+        q.order = i + 1;
+      });
+      setQuestions(updatedQuestions);
       setSelectedQuestions(new Set());
       setIsDeleteMode(false);
     }
@@ -377,7 +386,7 @@ export default function ExamCreateModal({
             <div className="space-y-6 h-full overflow-hidden">
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 pl-3 pt-4 h-full">
                 {/* Left Side - Question Type, Add Button, and Question Forms */}
-                <div className="space-y-4 sticky top-0 self-start h-fit max-h-[calc(85vh-200px)] pb-4 overflow-y-auto min-w-0 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
+                <div className="space-y-4 sticky top-0 self-start h-fit max-h-[calc(85vh-200px)] pl-1 overflow-y-auto min-w-0 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       Question Type
@@ -389,7 +398,7 @@ export default function ExamCreateModal({
                           e.target.value as "mcq" | "saq" | "coding"
                         )
                       }
-                      className="w-full border border-gray-300 p-3 rounded-md text-black focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="w-full border border-gray-300 p-3 rounded-md text-black bg-white focus:ring-1 focus:ring-blue-500 focus:border-transparent focus:outline-none"
                     >
                       <option value="mcq">Multiple Choice (MCQ)</option>
                       <option value="saq">Short Answer (SAQ)</option>
@@ -406,7 +415,7 @@ export default function ExamCreateModal({
                       : `Add ${currentQuestionType.toUpperCase()} Question`}
                   </Button>
 
-                  <div className="bg-gray-50 p-4 rounded-lg">
+                  <div className="">
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       Total Marks
                     </label>
@@ -414,7 +423,7 @@ export default function ExamCreateModal({
                       type="number"
                       value={totalMarks}
                       disabled
-                      className="w-full border border-gray-300 p-3 rounded-md text-black bg-gray-100 cursor-not-allowed"
+                      className="w-full border border-gray-300 p-3 rounded-md text-black bg-gray-50  cursor-not-allowed"
                     />
                   </div>
                 </div>
@@ -440,7 +449,7 @@ export default function ExamCreateModal({
                               })
                             }
                             rows={2}
-                            className="w-full border border-gray-300 p-2 rounded-md placeholder-gray-400 text-black focus:ring-2 focus:ring-blue-500 focus:border-transparent focus:outline-none text-sm"
+                            className="w-full border border-gray-300 p-2 rounded-md placeholder-gray-400 text-black bg-white focus:ring-1 focus:ring-blue-500 focus:border-transparent focus:outline-none text-sm"
                           />
                           {mcqForm.options.map((option, index) => (
                             <div
@@ -459,7 +468,7 @@ export default function ExamCreateModal({
                                     options: newOptions,
                                   });
                                 }}
-                                className="flex-1 border border-gray-300 p-2 rounded-md placeholder-gray-400 text-black focus:ring-2 focus:ring-blue-500 focus:border-transparent focus:outline-none text-sm"
+                                className="flex-1 border border-gray-300 p-2 rounded-md placeholder-gray-400 text-black bg-white focus:ring-1 focus:ring-blue-500 focus:border-transparent focus:outline-none text-sm"
                               />
                               <input
                                 type="radio"
@@ -487,7 +496,7 @@ export default function ExamCreateModal({
                                 marks: parseInt(e.target.value) || 1,
                               })
                             }
-                            className="w-full border border-gray-300 p-2 rounded-md placeholder-gray-400 text-black focus:ring-2 focus:ring-blue-500 focus:border-transparent focus:outline-none text-sm"
+                            className="w-full border border-gray-300 p-2 rounded-md placeholder-gray-400 text-black bg-white focus:ring-1 focus:ring-blue-500 focus:border-transparent focus:outline-none text-sm"
                           />
                         </div>
                       )}
@@ -505,7 +514,7 @@ export default function ExamCreateModal({
                               })
                             }
                             rows={2}
-                            className="w-full border border-gray-300 p-2 rounded-md placeholder-gray-400 text-black focus:ring-2 focus:ring-blue-500 focus:border-transparent focus:outline-none text-sm"
+                            className="w-full border border-gray-300 p-2 rounded-md placeholder-gray-400 text-black bg-white focus:ring-1 focus:ring-blue-500 focus:border-transparent focus:outline-none text-sm"
                           />
                           <textarea
                             required
@@ -518,7 +527,7 @@ export default function ExamCreateModal({
                               })
                             }
                             rows={2}
-                            className="w-full border border-gray-300 p-2 rounded-md placeholder-gray-400 text-black focus:ring-2 focus:ring-blue-500 focus:border-transparent focus:outline-none text-sm"
+                            className="w-full border border-gray-300 p-2 rounded-md placeholder-gray-400 text-black bg-white focus:ring-1 focus:ring-blue-500 focus:border-transparent focus:outline-none text-sm"
                           />
                           <input
                             type="number"
@@ -532,7 +541,7 @@ export default function ExamCreateModal({
                                 marks: parseInt(e.target.value) || 1,
                               })
                             }
-                            className="w-full border border-gray-300 p-2 rounded-md placeholder-gray-400 text-black focus:ring-2 focus:ring-blue-500 focus:border-transparent focus:outline-none text-sm"
+                            className="w-full border border-gray-300 p-2 rounded-md placeholder-gray-400 text-black bg-white focus:ring-1 focus:ring-blue-500 focus:border-transparent focus:outline-none text-sm"
                           />
                         </div>
                       )}
@@ -550,7 +559,7 @@ export default function ExamCreateModal({
                               })
                             }
                             rows={2}
-                            className="w-full border border-gray-300 p-2 rounded-md placeholder-gray-400 text-black focus:ring-2 focus:ring-blue-500 focus:border-transparent focus:outline-none text-sm"
+                            className="w-full border border-gray-300 p-2 rounded-md placeholder-gray-400 text-black bg-white focus:ring-1 focus:ring-blue-500 focus:border-transparent focus:outline-none text-sm"
                           />
                           <select
                             value={codingForm.language}
@@ -560,7 +569,7 @@ export default function ExamCreateModal({
                                 language: e.target.value,
                               })
                             }
-                            className="w-full border border-gray-300 p-2 rounded-md text-black focus:ring-2 focus:ring-blue-500 focus:border-transparent focus:outline-none text-sm"
+                            className="w-full border border-gray-300 p-2 rounded-md text-black bg-white focus:ring-1 focus:ring-blue-500 focus:border-transparent focus:outline-none text-sm"
                           >
                             <option value="javascript">JavaScript</option>
                             <option value="python">Python</option>
@@ -577,7 +586,7 @@ export default function ExamCreateModal({
                               })
                             }
                             rows={2}
-                            className="w-full border border-gray-300 p-2 rounded-md placeholder-gray-400 text-black focus:ring-2 focus:ring-blue-500 focus:border-transparent focus:outline-none text-sm font-mono"
+                            className="w-full border border-gray-300 p-2 rounded-md placeholder-gray-400 text-black bg-white focus:ring-1 focus:ring-blue-500 focus:border-transparent focus:outline-none text-sm font-mono"
                           />
                           <textarea
                             required
@@ -590,7 +599,7 @@ export default function ExamCreateModal({
                               })
                             }
                             rows={2}
-                            className="w-full border border-gray-300 p-2 rounded-md placeholder-gray-400 text-black focus:ring-2 focus:ring-blue-500 focus:border-transparent focus:outline-none text-sm font-mono"
+                            className="w-full border border-gray-300 p-2 rounded-md placeholder-gray-400 text-black bg-white focus:ring-1 focus:ring-blue-500 focus:border-transparent focus:outline-none text-sm font-mono"
                           />
                           <input
                             type="number"
@@ -604,7 +613,7 @@ export default function ExamCreateModal({
                                 marks: parseInt(e.target.value) || 1,
                               })
                             }
-                            className="w-full border border-gray-300 p-2 rounded-md placeholder-gray-400 text-black focus:ring-2 focus:ring-blue-500 focus:border-transparent focus:outline-none text-sm"
+                            className="w-full border border-gray-300 p-2 rounded-md placeholder-gray-400 text-black bg-white focus:ring-1 focus:ring-blue-500 focus:border-transparent focus:outline-none text-sm"
                           />
                         </div>
                       )}

@@ -360,7 +360,7 @@ export default function TeacherPage() {
                         placeholder="Student Email"
                         value={studentEmail}
                         onChange={(e) => setStudentEmail(e.target.value)}
-                        className="w-full border border-gray-300 p-3 rounded-md placeholder-gray-400 text-black focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        className="w-full border border-gray-300 p-3 rounded-md placeholder-gray-400 text-black focus:ring-1 focus:ring-blue-500 focus:outline-none focus:border-transparent"
                         disabled={studentSubmitting}
                       />
                       <input
@@ -369,7 +369,7 @@ export default function TeacherPage() {
                         placeholder="First Name"
                         value={studentFirstName}
                         onChange={(e) => setStudentFirstName(e.target.value)}
-                        className="w-full border border-gray-300 p-3 rounded-md placeholder-gray-400 text-black focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        className="w-full border border-gray-300 p-3 rounded-md placeholder-gray-400 text-black focus:ring-1 focus:ring-blue-500 focus:outline-none focus:border-transparent"
                         disabled={studentSubmitting}
                       />
                       <input
@@ -378,7 +378,7 @@ export default function TeacherPage() {
                         placeholder="Last Name"
                         value={studentLastName}
                         onChange={(e) => setStudentLastName(e.target.value)}
-                        className="w-full border border-gray-300 p-3 rounded-md placeholder-gray-400 text-black focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        className="w-full border border-gray-300 p-3 rounded-md placeholder-gray-400 text-black focus:ring-1 focus:ring-blue-500 focus:outline-none focus:border-transparent"
                         disabled={studentSubmitting}
                       />
                       <div className="space-y-2">
@@ -390,7 +390,7 @@ export default function TeacherPage() {
                           placeholder="Expiry Date (Optional)"
                           value={studentExpiryDate}
                           onChange={(e) => setStudentExpiryDate(e.target.value)}
-                          className="w-full border border-gray-300 p-3 rounded-md placeholder-gray-400 text-black focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                          className="w-full border border-gray-300 p-3 rounded-md placeholder-gray-400 text-black focus:ring-1 focus:ring-blue-500 focus:outline-none focus:border-transparent"
                           disabled={studentSubmitting}
                           min={new Date().toISOString().split("T")[0]}
                         />

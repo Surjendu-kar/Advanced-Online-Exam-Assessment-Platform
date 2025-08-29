@@ -1,369 +1,15 @@
 "use client";
 
 import { useState } from "react";
-import { motion } from "motion/react";
+import { motion, AnimatePresence } from "motion/react";
 import { Button } from "@/components/ui/Button";
 import { supabase } from "@/lib/supabaseClient";
 import { toast } from "react-hot-toast";
+import ExamModalHeader from "./ExamModalHeader";
+import ExamBasicInfo from "./ExamBasicInfo";
+import QuestionAccordion, { Question } from "./QuestionAccordion";
+import ExamModalFooter from "./ExamModalFooter";
 
-interface Question {
-  id: string;
-  type: "mcq" | "saq" | "coding";
-  question_text: string;
-  marks: number;
-  order: number;
-  data: any;
-}
-
-interface QuestionAccordionProps {
-  question: Question;
-  index: number;
-  totalQuestions: number;
-  onDragStart: (index: number) => void;
-  onDragOver: (index: number) => void;
-  onDrop: (index: number) => void;
-  onDragEnd: () => void;
-  onRemove: () => void;
-  onUpdate: (questionId: string, updatedData: any) => void;
-  isDragging: boolean;
-  isDropTarget: boolean;
-  isOpen: boolean;
-  onToggle: (questionId: string) => void;
-  isDeleteMode: boolean;
-  isSelected: boolean;
-  onToggleSelection: (questionId: string) => void;
-}
-
-function QuestionAccordion({
-  question,
-  index,
-  onDragStart,
-  onDragOver,
-  onDrop,
-  onDragEnd,
-  onUpdate,
-  isDragging,
-  isDropTarget,
-  isOpen,
-  onToggle,
-  isDeleteMode,
-  isSelected,
-  onToggleSelection,
-}: QuestionAccordionProps) {
-  const [editData, setEditData] = useState(question.data);
-
-  const handleDragStart = (e: React.DragEvent) => {
-    e.stopPropagation();
-    onDragStart(index);
-  };
-
-  const handleDragOver = (e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    onDragOver(index);
-  };
-
-  const handleDragLeave = (e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    // Only reset if we're leaving this specific element
-    if (!e.currentTarget.contains(e.relatedTarget as Node)) {
-      onDragOver(-1); // Reset drag over state
-    }
-  };
-
-  const handleDrop = (e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    onDrop(index);
-  };
-
-  return (
-    <div className="flex items-start space-x-3">
-      {isDeleteMode && (
-        <motion.div
-          initial={{ opacity: 0, x: -20 }}
-          animate={{ opacity: 1, x: 0 }}
-          exit={{ opacity: 0, x: -20 }}
-          transition={{ duration: 0.3 }}
-          className="mt-3"
-        >
-          <input
-            type="checkbox"
-            checked={isSelected}
-            onChange={() => onToggleSelection(question.id)}
-            className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-          />
-        </motion.div>
-      )}
-      <motion.div
-        layout
-        animate={{
-          paddingLeft: 0,
-        }}
-        transition={{
-          duration: 0.3,
-          ease: "easeInOut",
-        }}
-        className={`border rounded-lg transition-all duration-200 flex-1 ${
-          isDragging
-            ? "opacity-50 transform scale-95 border-blue-300"
-            : isDropTarget
-            ? "border-blue-400 bg-blue-50"
-            : isSelected
-            ? "border-blue-500 bg-blue-50"
-            : "border-gray-200"
-        }`}
-        onDragOver={handleDragOver}
-        onDragLeave={handleDragLeave}
-        onDrop={handleDrop}
-      >
-        <div
-          className="p-3 cursor-pointer hover:bg-gray-50 transition-colors duration-200"
-          onClick={() => onToggle(question.id)}
-        >
-          <div className="flex justify-between items-start">
-            <div className="flex items-center space-x-2">
-              <span className="text-sm font-medium text-gray-900">
-                Q{question.order}
-              </span>
-              <span className="text-xs bg-gray-100 text-gray-700 px-2 py-1 rounded">
-                {question.type.toUpperCase()}
-              </span>
-              <span className="text-xs text-blue-600 font-medium">
-                {question.marks} point{question.marks !== 1 ? "s" : ""}
-              </span>
-            </div>
-            <div
-              className="flex items-center space-x-2"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <svg
-                className={`w-4 h-4 text-gray-400 transition-transform duration-300 ease-in-out ${
-                  isOpen ? "rotate-180" : "rotate-0"
-                }`}
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M19 9l-7 7-7-7"
-                />
-              </svg>
-              {!isDeleteMode && (
-                <button
-                  draggable
-                  onDragStart={handleDragStart}
-                  onDragEnd={onDragEnd}
-                  className="text-gray-400 hover:text-gray-600 cursor-move hover:bg-gray-100 rounded p-1 transition-colors duration-200"
-                  title="Drag to reorder"
-                >
-                  ⋮⋮
-                </button>
-              )}
-            </div>
-          </div>
-          {!isOpen && (
-            <p className="text-sm text-gray-700 line-clamp-2 mt-2">
-              {question.question_text}
-            </p>
-          )}
-        </div>
-
-        <div
-          className={`border-t border-gray-200 bg-gray-50 transition-all duration-300 ease-in-out overflow-hidden ${
-            isOpen ? "max-h-screen opacity-100" : "max-h-0 opacity-0"
-          }`}
-        >
-          <div
-            className={`p-3 transition-all duration-300 ease-in-out ${
-              isOpen ? "opacity-100 translate-y-0" : "opacity-0 -translate-y-2"
-            }`}
-          >
-            {question.type === "mcq" && (
-              <div className="space-y-3">
-                <textarea
-                  placeholder="Enter question text..."
-                  value={editData.question_text}
-                  onChange={(e) =>
-                    setEditData({ ...editData, question_text: e.target.value })
-                  }
-                  rows={2}
-                  className="w-full border border-gray-300 p-2 rounded-md placeholder-gray-400 text-black focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
-                />
-                {editData.options?.map((option: string, optIndex: number) => (
-                  <div key={optIndex} className="flex items-center space-x-2">
-                    <input
-                      placeholder={`Option ${optIndex + 1}`}
-                      value={option}
-                      onChange={(e) => {
-                        const newOptions = [...editData.options];
-                        newOptions[optIndex] = e.target.value;
-                        setEditData({ ...editData, options: newOptions });
-                      }}
-                      className="flex-1 border border-gray-300 p-2 rounded-md placeholder-gray-400 text-black focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
-                    />
-                    <input
-                      type="radio"
-                      name="correct_option"
-                      checked={editData.correct_option === optIndex}
-                      onChange={() =>
-                        setEditData({ ...editData, correct_option: optIndex })
-                      }
-                      className="w-4 h-4 text-blue-600"
-                    />
-                  </div>
-                ))}
-                <input
-                  type="number"
-                  min="1"
-                  max="100"
-                  placeholder="Points"
-                  value={editData.marks}
-                  onChange={(e) =>
-                    setEditData({
-                      ...editData,
-                      marks: parseInt(e.target.value) || 1,
-                    })
-                  }
-                  className="w-full border border-gray-300 p-2 rounded-md placeholder-gray-400 text-black focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
-                />
-                <button
-                  onClick={() => {
-                    onUpdate(question.id, editData);
-                    onToggle(question.id);
-                  }}
-                  className="w-full bg-blue-600 text-white p-2 rounded-md hover:bg-blue-700 text-sm"
-                >
-                  Update Question
-                </button>
-              </div>
-            )}
-
-            {question.type === "saq" && (
-              <div className="space-y-3">
-                <textarea
-                  placeholder="Enter question text..."
-                  value={editData.question_text}
-                  onChange={(e) =>
-                    setEditData({ ...editData, question_text: e.target.value })
-                  }
-                  rows={2}
-                  className="w-full border border-gray-300 p-2 rounded-md placeholder-gray-400 text-black focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
-                />
-                <textarea
-                  placeholder="Expected answer..."
-                  value={editData.correct_answer}
-                  onChange={(e) =>
-                    setEditData({ ...editData, correct_answer: e.target.value })
-                  }
-                  rows={2}
-                  className="w-full border border-gray-300 p-2 rounded-md placeholder-gray-400 text-black focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
-                />
-                <input
-                  type="number"
-                  min="1"
-                  max="100"
-                  placeholder="Points"
-                  value={editData.marks}
-                  onChange={(e) =>
-                    setEditData({
-                      ...editData,
-                      marks: parseInt(e.target.value) || 1,
-                    })
-                  }
-                  className="w-full border border-gray-300 p-2 rounded-md placeholder-gray-400 text-black focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
-                />
-                <button
-                  onClick={() => {
-                    onUpdate(question.id, editData);
-                    onToggle(question.id);
-                  }}
-                  className="w-full bg-blue-600 text-white p-2 rounded-md hover:bg-blue-700 text-sm"
-                >
-                  Update Question
-                </button>
-              </div>
-            )}
-
-            {question.type === "coding" && (
-              <div className="space-y-3">
-                <textarea
-                  placeholder="Enter question text..."
-                  value={editData.question_text}
-                  onChange={(e) =>
-                    setEditData({ ...editData, question_text: e.target.value })
-                  }
-                  rows={2}
-                  className="w-full border border-gray-300 p-2 rounded-md placeholder-gray-400 text-black focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
-                />
-                <select
-                  value={editData.language}
-                  onChange={(e) =>
-                    setEditData({ ...editData, language: e.target.value })
-                  }
-                  className="w-full border border-gray-300 p-2 rounded-md text-black focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
-                >
-                  <option value="javascript">JavaScript</option>
-                  <option value="python">Python</option>
-                  <option value="java">Java</option>
-                  <option value="cpp">C++</option>
-                </select>
-                <textarea
-                  placeholder="Starter code (optional)..."
-                  value={editData.starter_code}
-                  onChange={(e) =>
-                    setEditData({ ...editData, starter_code: e.target.value })
-                  }
-                  rows={2}
-                  className="w-full border border-gray-300 p-2 rounded-md placeholder-gray-400 text-black focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm font-mono"
-                />
-                <textarea
-                  placeholder="Expected output..."
-                  value={editData.expected_output}
-                  onChange={(e) =>
-                    setEditData({
-                      ...editData,
-                      expected_output: e.target.value,
-                    })
-                  }
-                  rows={2}
-                  className="w-full border border-gray-300 p-2 rounded-md placeholder-gray-400 text-black focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm font-mono"
-                />
-                <input
-                  type="number"
-                  min="1"
-                  max="100"
-                  placeholder="Points"
-                  value={editData.marks}
-                  onChange={(e) =>
-                    setEditData({
-                      ...editData,
-                      marks: parseInt(e.target.value) || 1,
-                    })
-                  }
-                  className="w-full border border-gray-300 p-2 rounded-md placeholder-gray-400 text-black focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
-                />
-                <button
-                  onClick={() => {
-                    onUpdate(question.id, editData);
-                    onToggle(question.id);
-                  }}
-                  className="w-full bg-blue-600 text-white p-2 rounded-md hover:bg-blue-700 text-sm"
-                >
-                  Update Question
-                </button>
-              </div>
-            )}
-          </div>
-        </div>
-      </motion.div>
-    </div>
-  );
-}
 
 interface ExamCreateModalProps {
   isOpen: boolean;
@@ -394,6 +40,10 @@ export default function ExamCreateModal({
   const [selectedQuestions, setSelectedQuestions] = useState<Set<string>>(
     new Set()
   );
+  const [newlyAddedQuestions, setNewlyAddedQuestions] = useState<Set<string>>(
+    new Set()
+  );
+  const [isDeletingAll, setIsDeletingAll] = useState(false);
 
   const [mcqForm, setMcqForm] = useState({
     question_text: "",
@@ -473,8 +123,9 @@ export default function ExamCreateModal({
         break;
     }
 
+    const questionId = Math.random().toString(36).substr(2, 9);
     const newQuestion: Question = {
-      id: Math.random().toString(36).substr(2, 9),
+      id: questionId,
       type: currentQuestionType,
       question_text: questionText,
       marks: questionData.marks,
@@ -485,6 +136,13 @@ export default function ExamCreateModal({
     setQuestions([...questions, newQuestion]);
     resetCurrentForm();
     setShowQuestionForm(false);
+
+    // Mark as newly added and remove after animation
+    setNewlyAddedQuestions(new Set([questionId]));
+    setTimeout(() => {
+      setNewlyAddedQuestions(new Set());
+    }, 300); // Slightly longer than animation duration
+
     toast.success("Question added!");
   };
 
@@ -551,9 +209,21 @@ export default function ExamCreateModal({
   };
 
   const deleteSelectedQuestions = () => {
-    setQuestions(questions.filter((q) => !selectedQuestions.has(q.id)));
-    setSelectedQuestions(new Set());
-    setIsDeleteMode(false);
+    if (selectedQuestions.size === questions.length) {
+      // If deleting all questions, set flag and delay the actual deletion
+      setIsDeletingAll(true);
+      setTimeout(() => {
+        setQuestions([]);
+        setSelectedQuestions(new Set());
+        setIsDeleteMode(false);
+        setIsDeletingAll(false);
+      }, 250); // Allow time for exit animations
+    } else {
+      // Normal deletion for partial selection
+      setQuestions(questions.filter((q) => !selectedQuestions.has(q.id)));
+      setSelectedQuestions(new Set());
+      setIsDeleteMode(false);
+    }
   };
 
   const updateQuestion = (questionId: string, updatedData: any) => {
@@ -688,49 +358,19 @@ export default function ExamCreateModal({
           },
         }}
       >
-        <div className="px-4 py-2  border-b border-gray-200">
-          <div className="flex justify-between items-center">
-            <h2 className="text-xl font-semibold text-gray-900">
-              {step === 1 ? (
-                "Create New Exam"
-              ) : (
-                <button
-                  onClick={() => setStep(1)}
-                  className="flex items-center text-gray-900 hover:text-blue-600 hover:bg-gray-100 px-3 py-2 rounded-full transition-all duration-200"
-                >
-                  ←
-                </button>
-              )}
-            </h2>
-            <button
-              onClick={onClose}
-              className="text-gray-400 hover:text-red-500 hover:bg-gray-100 px-3 py-2 rounded-full transition-all duration-200"
-              title="Create New Exam"
-            >
-              ✕
-            </button>
-          </div>
-        </div>
-
+        <ExamModalHeader
+          step={step}
+          onGoBack={() => setStep(1)}
+          onClose={onClose}
+        />
         <div className="flex-1 overflow-hidden px-4 py-2">
           {step === 1 && (
-            <div className="space-y-4 py-2">
-              <input
-                type="text"
-                required
-                placeholder="Exam Title"
-                value={examTitle}
-                onChange={(e) => setExamTitle(e.target.value)}
-                className="w-full border border-gray-300 p-3 rounded-md placeholder-gray-400 text-black focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              />
-              <textarea
-                placeholder="Exam Description (Optional)"
-                value={examDescription}
-                onChange={(e) => setExamDescription(e.target.value)}
-                rows={3}
-                className="w-full border border-gray-300 p-3 rounded-md placeholder-gray-400 text-black focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              />
-            </div>
+            <ExamBasicInfo
+              examTitle={examTitle}
+              examDescription={examDescription}
+              onTitleChange={setExamTitle}
+              onDescriptionChange={setExamDescription}
+            />
           )}
 
           {step === 2 && (
@@ -800,7 +440,7 @@ export default function ExamCreateModal({
                               })
                             }
                             rows={2}
-                            className="w-full border border-gray-300 p-2 rounded-md placeholder-gray-400 text-black focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                            className="w-full border border-gray-300 p-2 rounded-md placeholder-gray-400 text-black focus:ring-2 focus:ring-blue-500 focus:border-transparent focus:outline-none text-sm"
                           />
                           {mcqForm.options.map((option, index) => (
                             <div
@@ -819,7 +459,7 @@ export default function ExamCreateModal({
                                     options: newOptions,
                                   });
                                 }}
-                                className="flex-1 border border-gray-300 p-2 rounded-md placeholder-gray-400 text-black focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                                className="flex-1 border border-gray-300 p-2 rounded-md placeholder-gray-400 text-black focus:ring-2 focus:ring-blue-500 focus:border-transparent focus:outline-none text-sm"
                               />
                               <input
                                 type="radio"
@@ -847,7 +487,7 @@ export default function ExamCreateModal({
                                 marks: parseInt(e.target.value) || 1,
                               })
                             }
-                            className="w-full border border-gray-300 p-2 rounded-md placeholder-gray-400 text-black focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                            className="w-full border border-gray-300 p-2 rounded-md placeholder-gray-400 text-black focus:ring-2 focus:ring-blue-500 focus:border-transparent focus:outline-none text-sm"
                           />
                         </div>
                       )}
@@ -865,7 +505,7 @@ export default function ExamCreateModal({
                               })
                             }
                             rows={2}
-                            className="w-full border border-gray-300 p-2 rounded-md placeholder-gray-400 text-black focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                            className="w-full border border-gray-300 p-2 rounded-md placeholder-gray-400 text-black focus:ring-2 focus:ring-blue-500 focus:border-transparent focus:outline-none text-sm"
                           />
                           <textarea
                             required
@@ -878,7 +518,7 @@ export default function ExamCreateModal({
                               })
                             }
                             rows={2}
-                            className="w-full border border-gray-300 p-2 rounded-md placeholder-gray-400 text-black focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                            className="w-full border border-gray-300 p-2 rounded-md placeholder-gray-400 text-black focus:ring-2 focus:ring-blue-500 focus:border-transparent focus:outline-none text-sm"
                           />
                           <input
                             type="number"
@@ -892,7 +532,7 @@ export default function ExamCreateModal({
                                 marks: parseInt(e.target.value) || 1,
                               })
                             }
-                            className="w-full border border-gray-300 p-2 rounded-md placeholder-gray-400 text-black focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                            className="w-full border border-gray-300 p-2 rounded-md placeholder-gray-400 text-black focus:ring-2 focus:ring-blue-500 focus:border-transparent focus:outline-none text-sm"
                           />
                         </div>
                       )}
@@ -910,7 +550,7 @@ export default function ExamCreateModal({
                               })
                             }
                             rows={2}
-                            className="w-full border border-gray-300 p-2 rounded-md placeholder-gray-400 text-black focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                            className="w-full border border-gray-300 p-2 rounded-md placeholder-gray-400 text-black focus:ring-2 focus:ring-blue-500 focus:border-transparent focus:outline-none text-sm"
                           />
                           <select
                             value={codingForm.language}
@@ -920,7 +560,7 @@ export default function ExamCreateModal({
                                 language: e.target.value,
                               })
                             }
-                            className="w-full border border-gray-300 p-2 rounded-md text-black focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                            className="w-full border border-gray-300 p-2 rounded-md text-black focus:ring-2 focus:ring-blue-500 focus:border-transparent focus:outline-none text-sm"
                           >
                             <option value="javascript">JavaScript</option>
                             <option value="python">Python</option>
@@ -937,7 +577,7 @@ export default function ExamCreateModal({
                               })
                             }
                             rows={2}
-                            className="w-full border border-gray-300 p-2 rounded-md placeholder-gray-400 text-black focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm font-mono"
+                            className="w-full border border-gray-300 p-2 rounded-md placeholder-gray-400 text-black focus:ring-2 focus:ring-blue-500 focus:border-transparent focus:outline-none text-sm font-mono"
                           />
                           <textarea
                             required
@@ -950,7 +590,7 @@ export default function ExamCreateModal({
                               })
                             }
                             rows={2}
-                            className="w-full border border-gray-300 p-2 rounded-md placeholder-gray-400 text-black focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm font-mono"
+                            className="w-full border border-gray-300 p-2 rounded-md placeholder-gray-400 text-black focus:ring-2 focus:ring-blue-500 focus:border-transparent focus:outline-none text-sm font-mono"
                           />
                           <input
                             type="number"
@@ -964,7 +604,7 @@ export default function ExamCreateModal({
                                 marks: parseInt(e.target.value) || 1,
                               })
                             }
-                            className="w-full border border-gray-300 p-2 rounded-md placeholder-gray-400 text-black focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                            className="w-full border border-gray-300 p-2 rounded-md placeholder-gray-400 text-black focus:ring-2 focus:ring-blue-500 focus:border-transparent focus:outline-none text-sm"
                           />
                         </div>
                       )}
@@ -1027,37 +667,42 @@ export default function ExamCreateModal({
                           </button>
                         </div>
                       </div>
-                      {questions.length === 0 ? (
+                      {questions.length === 0 && !isDeletingAll ? (
                         <div className="text-center text-gray-500 py-8">
                           No questions added yet. Click "Add Question" to get
                           started.
                         </div>
                       ) : (
                         <div className="space-y-3">
-                          {questions.map((question, index) => (
-                            <QuestionAccordion
-                              key={question.id}
-                              question={question}
-                              index={index}
-                              totalQuestions={questions.length}
-                              onDragStart={handleDragStart}
-                              onDragOver={handleDragOver}
-                              onDrop={handleDrop}
-                              onDragEnd={handleDragEnd}
-                              onRemove={() => removeQuestion(question.id)}
-                              onUpdate={updateQuestion}
-                              isDragging={draggedQuestionIndex === index}
-                              isDropTarget={
-                                dragOverIndex === index &&
-                                draggedQuestionIndex !== index
-                              }
-                              isOpen={openAccordionId === question.id}
-                              onToggle={handleAccordionToggle}
-                              isDeleteMode={isDeleteMode}
-                              isSelected={selectedQuestions.has(question.id)}
-                              onToggleSelection={toggleQuestionSelection}
-                            />
-                          ))}
+                          <AnimatePresence mode="popLayout">
+                            {questions.map((question, index) => (
+                              <QuestionAccordion
+                                key={question.id}
+                                question={question}
+                                index={index}
+                                totalQuestions={questions.length}
+                                onDragStart={handleDragStart}
+                                onDragOver={handleDragOver}
+                                onDrop={handleDrop}
+                                onDragEnd={handleDragEnd}
+                                onRemove={() => removeQuestion(question.id)}
+                                onUpdate={updateQuestion}
+                                isDragging={draggedQuestionIndex === index}
+                                isDropTarget={
+                                  dragOverIndex === index &&
+                                  draggedQuestionIndex !== index
+                                }
+                                isOpen={openAccordionId === question.id}
+                                onToggle={handleAccordionToggle}
+                                isDeleteMode={isDeleteMode}
+                                isSelected={selectedQuestions.has(question.id)}
+                                onToggleSelection={toggleQuestionSelection}
+                                isNewlyAdded={newlyAddedQuestions.has(
+                                  question.id
+                                )}
+                              />
+                            ))}
+                          </AnimatePresence>
                         </div>
                       )}
                     </>
@@ -1068,37 +713,18 @@ export default function ExamCreateModal({
           )}
         </div>
 
-        {/* Fixed bottom buttons */}
-        <div className="px-6 py-4 ">
-          {step === 1 && (
-            <div className="flex justify-end">
-              <Button onClick={() => setStep(2)} disabled={!examTitle.trim()}>
-                Next: Add Questions
-              </Button>
-            </div>
-          )}
-
-          {step === 2 && (
-            <div className="flex justify-end space-x-3">
-              <Button
-                variant="outline"
-                onClick={() => {
-                  onClose();
-                  resetModal();
-                }}
-              >
-                Cancel
-              </Button>
-              <Button
-                onClick={createExam}
-                loading={submitting}
-                disabled={submitting || questions.length === 0}
-              >
-                {submitting ? "Creating Exam..." : "Create Exam"}
-              </Button>
-            </div>
-          )}
-        </div>
+        <ExamModalFooter
+          step={step}
+          examTitle={examTitle}
+          questionsCount={questions.length}
+          submitting={submitting}
+          onNextStep={() => setStep(2)}
+          onCreateExam={createExam}
+          onCancel={() => {
+            onClose();
+            resetModal();
+          }}
+        />
       </motion.div>
     </div>
   );

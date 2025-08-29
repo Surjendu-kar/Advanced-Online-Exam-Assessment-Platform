@@ -6,7 +6,7 @@ import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { supabase } from "@/lib/supabaseClient";
 import { toast } from "react-hot-toast";
-import ExamCreateModal from "@/components/ui/ExamCreateModal";
+import ExamCreateModal from "@/components/exam/create-exam/ExamCreateModal";
 
 interface StudentInvitation {
   id: string;

@@ -72,7 +72,8 @@ export async function POST(
           .insert({
             ...baseData,
             question_text: questionData.question_text,
-            correct_answer: questionData.correct_answer,
+            grading_guidelines: questionData.grading_guidelines,
+            rubric: questionData.rubric || null,
           })
           .select()
           .single();
@@ -87,6 +88,7 @@ export async function POST(
             starter_code: questionData.starter_code || "",
             expected_output: questionData.expected_output,
             language: questionData.language || "javascript",
+            test_cases: questionData.test_cases || null,
           })
           .select()
           .single();

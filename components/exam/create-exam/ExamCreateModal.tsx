@@ -9,6 +9,7 @@ import ExamModalHeader from "./ExamModalHeader";
 import ExamBasicInfo from "./ExamBasicInfo";
 import QuestionAccordion, { Question } from "./QuestionAccordion";
 import ExamModalFooter from "./ExamModalFooter";
+import QuestionControlPanel from "./QuestionControlPanel";
 
 interface ExamCreateModalProps {
   isOpen: boolean;
@@ -24,6 +25,8 @@ export default function ExamCreateModal({
   const [step, setStep] = useState(1);
   const [examTitle, setExamTitle] = useState("");
   const [examDescription, setExamDescription] = useState("");
+  const [startTime, setStartTime] = useState("");
+  const [endTime, setEndTime] = useState("");
   const [questions, setQuestions] = useState<Question[]>([]);
   const [currentQuestionType, setCurrentQuestionType] = useState<
     "mcq" | "saq" | "coding"
@@ -53,7 +56,7 @@ export default function ExamCreateModal({
 
   const [saqForm, setSaqForm] = useState({
     question_text: "",
-    correct_answer: "",
+    grading_guidelines: "",
     marks: 1,
   });
 
@@ -63,6 +66,7 @@ export default function ExamCreateModal({
     expected_output: "",
     language: "javascript",
     marks: 1,
+    test_cases: null,
   });
 
   if (!isOpen) return null;
@@ -76,7 +80,7 @@ export default function ExamCreateModal({
     });
     setSaqForm({
       question_text: "",
-      correct_answer: "",
+      grading_guidelines: "",
       marks: 1,
     });
     setCodingForm({
@@ -85,6 +89,7 @@ export default function ExamCreateModal({
       expected_output: "",
       language: "javascript",
       marks: 1,
+      test_cases: null,
     });
   };
 
@@ -105,8 +110,8 @@ export default function ExamCreateModal({
         questionText = mcqForm.question_text;
         break;
       case "saq":
-        if (!saqForm.question_text || !saqForm.correct_answer) {
-          toast.error("Please fill all SAQ fields");
+        if (!saqForm.question_text) {
+          toast.error("Please fill SAQ question text");
           return;
         }
         questionData = { ...saqForm };
@@ -224,7 +229,9 @@ export default function ExamCreateModal({
       }, 250); // Allow time for exit animations
     } else {
       // Normal deletion for partial selection
-      const updatedQuestions = questions.filter((q) => !selectedQuestions.has(q.id));
+      const updatedQuestions = questions.filter(
+        (q) => !selectedQuestions.has(q.id)
+      );
       // Update order numbers after deletion
       updatedQuestions.forEach((q, i) => {
         q.order = i + 1;
@@ -262,6 +269,7 @@ export default function ExamCreateModal({
       const session = await supabase.auth.getSession();
       if (!session.data.session) {
         toast.error("Not authenticated");
+        setSubmitting(false);
         return;
       }
 
@@ -274,12 +282,15 @@ export default function ExamCreateModal({
         body: JSON.stringify({
           title: examTitle,
           description: examDescription,
+          startTime: startTime || null,
+          endTime: endTime || null,
         }),
       });
 
       const examData = await examRes.json();
       if (!examRes.ok) {
         toast.error(examData.error || "Failed to create exam");
+        setSubmitting(false);
         return;
       }
 
@@ -306,6 +317,7 @@ export default function ExamCreateModal({
           toast.error(
             `Failed to create question ${question.order}: ${errorData.error}`
           );
+          setSubmitting(false);
           return;
         }
       }
@@ -326,6 +338,8 @@ export default function ExamCreateModal({
     setStep(1);
     setExamTitle("");
     setExamDescription("");
+    setStartTime("");
+    setEndTime("");
     setQuestions([]);
     resetCurrentForm();
   };
@@ -386,55 +400,28 @@ export default function ExamCreateModal({
             <div className="space-y-6 h-full overflow-hidden">
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 pl-3 pt-4 h-full">
                 {/* Left Side - Question Type, Add Button, and Question Forms */}
-                <div className="space-y-4 sticky top-0 self-start h-fit max-h-[calc(85vh-200px)] pl-1 overflow-y-auto min-w-0 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Question Type
-                    </label>
-                    <select
-                      value={currentQuestionType}
-                      onChange={(e) =>
-                        setCurrentQuestionType(
-                          e.target.value as "mcq" | "saq" | "coding"
-                        )
-                      }
-                      className="w-full border border-gray-300 p-3 rounded-md text-black bg-white focus:ring-1 focus:ring-blue-500 focus:border-transparent focus:outline-none"
-                    >
-                      <option value="mcq">Multiple Choice (MCQ)</option>
-                      <option value="saq">Short Answer (SAQ)</option>
-                      <option value="coding">Coding Challenge</option>
-                    </select>
-                  </div>
 
-                  <Button
-                    onClick={() => setShowQuestionForm(!showQuestionForm)}
-                    className="w-full"
-                  >
-                    {showQuestionForm
-                      ? "Cancel"
-                      : `Add ${currentQuestionType.toUpperCase()} Question`}
-                  </Button>
-
-                  <div className="">
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Total Marks
-                    </label>
-                    <input
-                      type="number"
-                      value={totalMarks}
-                      disabled
-                      className="w-full border border-gray-300 p-3 rounded-md text-black bg-gray-50  cursor-not-allowed"
-                    />
-                  </div>
-                </div>
+                <QuestionControlPanel
+                  currentQuestionType={currentQuestionType}
+                  showQuestionForm={showQuestionForm}
+                  totalMarks={totalMarks}
+                  startTime={startTime}
+                  endTime={endTime}
+                  onQuestionTypeChange={setCurrentQuestionType}
+                  onToggleQuestionForm={() =>
+                    setShowQuestionForm(!showQuestionForm)
+                  }
+                  onStartTimeChange={setStartTime}
+                  onEndTimeChange={setEndTime}
+                />
 
                 {/* Right Side - Added Questions or Question Form */}
                 <div className="space-y-4 pb-4 overflow-y-auto min-w-0 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100 pr-3">
                   {showQuestionForm ? (
                     <div className="bg-gray-50 p-4 rounded-lg space-y-4">
-                      <h4 className="font-medium text-gray-900">
+                      {/* <h4 className="font-medium text-gray-900">
                         New {currentQuestionType.toUpperCase()} Question
-                      </h4>
+                      </h4> */}
 
                       {currentQuestionType === "mcq" && (
                         <div className="space-y-3">
@@ -502,7 +489,7 @@ export default function ExamCreateModal({
                       )}
 
                       {currentQuestionType === "saq" && (
-                        <div className="space-y-3">
+                        <div className="space-y-2">
                           <textarea
                             required
                             placeholder="Enter question text..."
@@ -517,16 +504,15 @@ export default function ExamCreateModal({
                             className="w-full border border-gray-300 p-2 rounded-md placeholder-gray-400 text-black bg-white focus:ring-1 focus:ring-blue-500 focus:border-transparent focus:outline-none text-sm"
                           />
                           <textarea
-                            required
-                            placeholder="Expected answer..."
-                            value={saqForm.correct_answer}
+                            placeholder="Grading guidelines (optional - e.g., Award 2 points for correct concept, 1 for partial understanding)..."
+                            value={saqForm.grading_guidelines}
                             onChange={(e) =>
                               setSaqForm({
                                 ...saqForm,
-                                correct_answer: e.target.value,
+                                grading_guidelines: e.target.value,
                               })
                             }
-                            rows={2}
+                            rows={3}
                             className="w-full border border-gray-300 p-2 rounded-md placeholder-gray-400 text-black bg-white focus:ring-1 focus:ring-blue-500 focus:border-transparent focus:outline-none text-sm"
                           />
                           <input
@@ -547,7 +533,7 @@ export default function ExamCreateModal({
                       )}
 
                       {currentQuestionType === "coding" && (
-                        <div className="space-y-3">
+                        <div className="space-y-2">
                           <textarea
                             required
                             placeholder="Enter question text..."
@@ -599,6 +585,33 @@ export default function ExamCreateModal({
                               })
                             }
                             rows={2}
+                            className="w-full border border-gray-300 p-2 rounded-md placeholder-gray-400 text-black bg-white focus:ring-1 focus:ring-blue-500 focus:border-transparent focus:outline-none text-sm font-mono"
+                          />
+                          <textarea
+                            placeholder="Test cases (optional - JSON format)..."
+                            value={
+                              codingForm.test_cases
+                                ? JSON.stringify(codingForm.test_cases, null, 2)
+                                : ""
+                            }
+                            onChange={(e) => {
+                              try {
+                                const parsed = e.target.value
+                                  ? JSON.parse(e.target.value)
+                                  : null;
+                                setCodingForm({
+                                  ...codingForm,
+                                  test_cases: parsed,
+                                });
+                              } catch {
+                                // Keep null if JSON parsing fails - user needs to fix the JSON format
+                                setCodingForm({
+                                  ...codingForm,
+                                  test_cases: null,
+                                });
+                              }
+                            }}
+                            rows={3}
                             className="w-full border border-gray-300 p-2 rounded-md placeholder-gray-400 text-black bg-white focus:ring-1 focus:ring-blue-500 focus:border-transparent focus:outline-none text-sm font-mono"
                           />
                           <input

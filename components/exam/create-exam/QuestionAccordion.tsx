@@ -288,12 +288,15 @@ export default function QuestionAccordion({
                   className="w-full border border-gray-300 p-2 rounded-md placeholder-gray-400 text-black focus:ring-1 focus:ring-blue-500 focus:border-transparent focus:outline-none text-sm"
                 />
 
-                {/* Expected answer input */}
+                {/* Grading guidelines input */}
                 <textarea
-                  placeholder="Expected answer..."
-                  value={editData.correct_answer}
+                  placeholder="Grading guidelines (optional)..."
+                  value={editData.grading_guidelines || ""}
                   onChange={(e) =>
-                    setEditData({ ...editData, correct_answer: e.target.value })
+                    setEditData({
+                      ...editData,
+                      grading_guidelines: e.target.value,
+                    })
                   }
                   rows={2}
                   className="w-full border border-gray-300 p-2 rounded-md placeholder-gray-400 text-black focus:ring-1 focus:ring-blue-500 focus:border-transparent focus:outline-none text-sm"
@@ -378,6 +381,29 @@ export default function QuestionAccordion({
                     })
                   }
                   rows={2}
+                  className="w-full border border-gray-300 p-2 rounded-md placeholder-gray-400 text-black focus:ring-1 focus:ring-blue-500 focus:border-transparent focus:outline-none text-sm font-mono"
+                />
+
+                {/* Test cases input */}
+                <textarea
+                  placeholder="Test cases (optional - JSON format)..."
+                  value={
+                    editData.test_cases
+                      ? JSON.stringify(editData.test_cases, null, 2)
+                      : ""
+                  }
+                  onChange={(e) => {
+                    try {
+                      const parsed = e.target.value
+                        ? JSON.parse(e.target.value)
+                        : null;
+                      setEditData({ ...editData, test_cases: parsed });
+                    } catch {
+                      // Keep the raw string for editing
+                      setEditData({ ...editData, test_cases: e.target.value });
+                    }
+                  }}
+                  rows={3}
                   className="w-full border border-gray-300 p-2 rounded-md placeholder-gray-400 text-black focus:ring-1 focus:ring-blue-500 focus:border-transparent focus:outline-none text-sm font-mono"
                 />
 

@@ -167,15 +167,20 @@ create table public.saq (
   exam_id uuid not null,
   user_id uuid null,
   question_text text not null,
-  correct_answer text not null,
+  grading_guidelines text null,
+  rubric jsonb null,
   answer_text text null,
   marks integer not null,
   marks_obtained integer null,
   question_order integer null,
+  graded_by uuid null,
+  graded_at timestamp with time zone null,
+  teacher_feedback text null,
   created_at timestamp with time zone not null default now(),
   constraint saq_pkey primary key (id),
   constraint saq_exam_id_fkey foreign key (exam_id) references exams (id) on delete cascade,
-  constraint saq_user_id_fkey foreign key (user_id) references auth.users (id)
+  constraint saq_user_id_fkey foreign key (user_id) references auth.users (id),
+  constraint saq_graded_by_fkey foreign key (graded_by) references auth.users (id)
 );
 ```
 
@@ -189,16 +194,23 @@ create table public.coding (
   question_text text not null,
   starter_code text null,
   expected_output text not null,
+  test_cases jsonb null,
   submitted_code text null,
   output text null,
+  execution_results jsonb null,
   marks integer not null,
   marks_obtained integer null,
+  code_quality_score integer null,
   language text not null,
   question_order integer null,
+  graded_by uuid null,
+  graded_at timestamp with time zone null,
+  teacher_feedback text null,
   created_at timestamp with time zone not null default now(),
   constraint coding_pkey primary key (id),
   constraint coding_exam_id_fkey foreign key (exam_id) references exams (id) on delete cascade,
-  constraint coding_user_id_fkey foreign key (user_id) references auth.users (id)
+  constraint coding_user_id_fkey foreign key (user_id) references auth.users (id),
+  constraint coding_graded_by_fkey foreign key (graded_by) references auth.users (id)
 );
 ```
 
@@ -510,6 +522,12 @@ CREATE TRIGGER update_user_profiles_updated_at
 CREATE INDEX IF NOT EXISTS idx_mcq_exam_order ON public.mcq(exam_id, question_order);
 CREATE INDEX IF NOT EXISTS idx_saq_exam_order ON public.saq(exam_id, question_order);
 CREATE INDEX IF NOT EXISTS idx_coding_exam_order ON public.coding(exam_id, question_order);
+
+-- Grading indexes for performance
+CREATE INDEX IF NOT EXISTS idx_saq_graded_by ON public.saq(graded_by);
+CREATE INDEX IF NOT EXISTS idx_saq_graded_at ON public.saq(graded_at);
+CREATE INDEX IF NOT EXISTS idx_coding_graded_by ON public.coding(graded_by);
+CREATE INDEX IF NOT EXISTS idx_coding_graded_at ON public.coding(graded_at);
 ```
 
 ## 7. Setup Instructions

@@ -104,16 +104,9 @@ export async function getTeacherExams(
   supabase: SupabaseClient,
   teacherId: string
 ) {
-  const { data, error } = await supabase
+  const { data: exams, error } = await supabase
     .from("exams")
-    .select(
-      `
-      *,
-      mcq(count),
-      saq(count),
-      coding(count)
-    `
-    )
+    .select("*")
     .eq("created_by", teacherId)
     .order("created_at", { ascending: false });
 
@@ -121,7 +114,67 @@ export async function getTeacherExams(
     throw new Error(`Failed to fetch exams: ${error.message}`);
   }
 
-  return data;
+  if (!exams || exams.length === 0) {
+    return [];
+  }
+
+  // Fetch question counts and marks for each exam
+  const examIds = exams.map((exam) => exam.id);
+
+  const [mcqResults, saqResults, codingResults] = await Promise.all([
+    supabase.from("mcq").select("exam_id, marks").in("exam_id", examIds),
+    supabase.from("saq").select("exam_id, marks").in("exam_id", examIds),
+    supabase.from("coding").select("exam_id, marks").in("exam_id", examIds),
+  ]);
+
+  if (mcqResults.error || saqResults.error || codingResults.error) {
+    // If there's an error fetching questions, return exams without question data
+    console.warn("Error fetching question data:", {
+      mcqError: mcqResults.error,
+      saqError: saqResults.error,
+      codingError: codingResults.error,
+    });
+    return exams.map((exam) => ({
+      ...exam,
+      question_count: 0,
+      total_marks: 0,
+      mcq_count: 0,
+      saq_count: 0,
+      coding_count: 0,
+    }));
+  }
+
+  // Process the data to calculate totals for each exam
+  const processedExams = exams.map((exam) => {
+    const mcqQuestions =
+      mcqResults.data?.filter((q) => q.exam_id === exam.id) || [];
+    const saqQuestions =
+      saqResults.data?.filter((q) => q.exam_id === exam.id) || [];
+    const codingQuestions =
+      codingResults.data?.filter((q) => q.exam_id === exam.id) || [];
+
+    const mcqCount = mcqQuestions.length;
+    const saqCount = saqQuestions.length;
+    const codingCount = codingQuestions.length;
+
+    const mcqMarks = mcqQuestions.reduce((sum, q) => sum + (q.marks || 0), 0);
+    const saqMarks = saqQuestions.reduce((sum, q) => sum + (q.marks || 0), 0);
+    const codingMarks = codingQuestions.reduce(
+      (sum, q) => sum + (q.marks || 0),
+      0
+    );
+
+    return {
+      ...exam,
+      question_count: mcqCount + saqCount + codingCount,
+      total_marks: mcqMarks + saqMarks + codingMarks,
+      mcq_count: mcqCount,
+      saq_count: saqCount,
+      coding_count: codingCount,
+    };
+  });
+
+  return processedExams;
 }
 
 export async function getExamWithQuestions(

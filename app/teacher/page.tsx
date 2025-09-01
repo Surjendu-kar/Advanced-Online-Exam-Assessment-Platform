@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/Button";
 import { supabase } from "@/lib/supabaseClient";
 import { toast } from "react-hot-toast";
 import ExamCreateModal from "@/components/exam/create-exam/ExamCreateModal";
+import { ExamWithStats } from "@/types/database";
 
 interface StudentInvitation {
   id: string;
@@ -17,18 +18,6 @@ interface StudentInvitation {
   exam_id?: string;
   expires_at: string;
   created_at: string;
-}
-
-interface Exam {
-  id: string;
-  title: string;
-  description?: string;
-  unique_code: string;
-  start_time?: string;
-  end_time?: string;
-  created_at: string;
-  access_type: string;
-  max_attempts: number;
 }
 
 export default function TeacherPage() {
@@ -49,7 +38,7 @@ export default function TeacherPage() {
   const [studentInvitations, setStudentInvitations] = useState<
     StudentInvitation[]
   >([]);
-  const [exams, setExams] = useState<Exam[]>([]);
+  const [exams, setExams] = useState<ExamWithStats[]>([]);
   const [loadingData, setLoadingData] = useState(true);
 
   // Tab state
@@ -266,6 +255,9 @@ export default function TeacherPage() {
                                 Questions
                               </th>
                               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Total Marks
+                              </th>
+                              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                 Created
                               </th>
                               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -308,7 +300,23 @@ export default function TeacherPage() {
                                   )}
                                 </td>
                                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                  <span className="text-gray-400">-</span>
+                                  <div className="flex items-center space-x-1">
+                                    <span className="font-medium text-gray-900">
+                                      {exam.question_count || 0}
+                                    </span>
+                                    {(exam.question_count || 0) > 0 && (
+                                      <div className="text-xs text-gray-400">
+                                        ({exam.mcq_count || 0}M,{" "}
+                                        {exam.saq_count || 0}S,{" "}
+                                        {exam.coding_count || 0}C)
+                                      </div>
+                                    )}
+                                  </div>
+                                </td>
+                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                  <span className="font-medium text-gray-900">
+                                    {exam.total_marks || 0}
+                                  </span>
                                 </td>
                                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                                   {new Date(exam.created_at).toLocaleDateString(

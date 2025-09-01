@@ -138,6 +138,15 @@ export interface ExamWithQuestions extends Exam {
   coding?: CodingQuestion[];
 }
 
+// Extended exam interface with calculated fields for teacher dashboard
+export interface ExamWithStats extends Exam {
+  question_count?: number;
+  total_marks?: number;
+  mcq_count?: number;
+  saq_count?: number;
+  coding_count?: number;
+}
+
 export interface SessionWithLogs extends ExamSession {
   proctoring_logs?: ProctoringLog[];
 }

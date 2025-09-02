@@ -3,12 +3,12 @@ import { createRouteClient } from "@/lib/supabaseRouteClient";
 
 export async function POST(
   req: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   const routeClient = createRouteClient(req);
 
   try {
-    const examId = params.id;
+    const { id: examId } = await params;
     const { type, questionData } = await req.json();
 
     const {
@@ -123,12 +123,12 @@ export async function POST(
 
 export async function GET(
   req: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   const routeClient = createRouteClient(req);
 
   try {
-    const examId = params.id;
+    const { id: examId } = await params;
 
     const {
       data: { user },
@@ -196,6 +196,80 @@ export async function GET(
     });
   } catch (error) {
     console.error("Error fetching questions:", error);
+    return NextResponse.json(
+      { error: "An unexpected error occurred" },
+      { status: 500 }
+    );
+  }
+}
+
+export async function DELETE(
+  req: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const routeClient = createRouteClient(req);
+
+  try {
+    const { id: examId } = await params;
+
+    const {
+      data: { user },
+    } = await routeClient.auth.getUser();
+
+    if (!user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const { data: profile } = await routeClient
+      .from("user_profiles")
+      .select("role")
+      .eq("id", user.id)
+      .single();
+
+    if (!profile || profile.role !== "teacher") {
+      return NextResponse.json(
+        { error: "Forbidden - Teacher access required" },
+        { status: 403 }
+      );
+    }
+
+    const { data: exam } = await routeClient
+      .from("exams")
+      .select("created_by")
+      .eq("id", examId)
+      .single();
+
+    if (!exam || exam.created_by !== user.id) {
+      return NextResponse.json(
+        { error: "Exam not found or access denied" },
+        { status: 404 }
+      );
+    }
+
+    // Delete all questions for this exam
+    const [mcqDelete, saqDelete, codingDelete] = await Promise.all([
+      routeClient.from("mcq").delete().eq("exam_id", examId),
+      routeClient.from("saq").delete().eq("exam_id", examId),
+      routeClient.from("coding").delete().eq("exam_id", examId),
+    ]);
+
+    if (mcqDelete.error || saqDelete.error || codingDelete.error) {
+      console.error("Error deleting questions:", {
+        mcq: mcqDelete.error,
+        saq: saqDelete.error,
+        coding: codingDelete.error,
+      });
+      return NextResponse.json(
+        { error: "Failed to delete questions" },
+        { status: 500 }
+      );
+    }
+
+    return NextResponse.json({
+      message: "All questions deleted successfully",
+    });
+  } catch (error) {
+    console.error("Error deleting questions:", error);
     return NextResponse.json(
       { error: "An unexpected error occurred" },
       { status: 500 }

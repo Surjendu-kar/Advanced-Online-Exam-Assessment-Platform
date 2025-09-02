@@ -3,12 +3,12 @@ import { createRouteClient } from "@/lib/supabaseRouteClient";
 
 export async function PUT(
   req: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   const routeClient = createRouteClient(req);
 
   try {
-    const examId = params.id;
+    const { id: examId } = await params;
     const {
       title,
       description,
@@ -105,12 +105,12 @@ export async function PUT(
 
 export async function DELETE(
   req: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   const routeClient = createRouteClient(req);
 
   try {
-    const examId = params.id;
+    const { id: examId } = await params;
 
     const {
       data: { user },
@@ -161,12 +161,12 @@ export async function DELETE(
 
 export async function GET(
   req: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   const routeClient = createRouteClient(req);
 
   try {
-    const examId = params.id;
+    const { id: examId } = await params;
 
     const {
       data: { user },

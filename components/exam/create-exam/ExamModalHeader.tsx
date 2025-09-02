@@ -2,12 +2,14 @@
 
 interface ExamModalHeaderProps {
   step: number;
+  isEditMode?: boolean;
   onGoBack: () => void;
   onClose: () => void;
 }
 
 export default function ExamModalHeader({
   step,
+  isEditMode = false,
   onGoBack,
   onClose,
 }: ExamModalHeaderProps) {
@@ -16,7 +18,11 @@ export default function ExamModalHeader({
       <div className="flex justify-between items-center">
         <h2 className="text-xl font-semibold text-gray-900">
           {step === 1 ? (
-            "Create New Exam"
+            isEditMode ? (
+              "Edit Exam"
+            ) : (
+              "Create New Exam"
+            )
           ) : (
             <button
               onClick={onGoBack}

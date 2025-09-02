@@ -8,6 +8,7 @@ import { supabase } from "@/lib/supabaseClient";
 import { toast } from "react-hot-toast";
 import ExamCreateModal from "@/components/exam/create-exam/ExamCreateModal";
 import { ExamWithStats } from "@/types/database";
+import { motion, AnimatePresence } from "motion/react";
 
 interface StudentInvitation {
   id: string;
@@ -33,6 +34,11 @@ export default function TeacherPage() {
 
   // Exam creation states
   const [showCreateModal, setShowCreateModal] = useState(false);
+
+  // Edit state
+  const [editingExam, setEditingExam] = useState<ExamWithStats | null>(null);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [deletingExamId, setDeletingExamId] = useState<string | null>(null);
 
   // Data states
   const [studentInvitations, setStudentInvitations] = useState<
@@ -106,7 +112,96 @@ export default function TeacherPage() {
   };
 
   const handleStudentInvite = async (e: React.FormEvent) => {
-    // ... existing code ...
+    e.preventDefault();
+    setStudentSubmitting(true);
+
+    try {
+      const session = await supabase.auth.getSession();
+      if (!session.data.session) {
+        toast.error("Not authenticated");
+        setStudentSubmitting(false);
+        return;
+      }
+
+      const res = await fetch("/api/students", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session.data.session.access_token}`,
+        },
+        body: JSON.stringify({
+          email: studentEmail,
+          firstName: studentFirstName,
+          lastName: studentLastName,
+          expiresAt: studentExpiryDate || undefined,
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        toast.error(data.error || "Failed to invite student");
+      } else {
+        toast.success(
+          `Student invited successfully! Invitation sent to ${studentEmail}`
+        );
+        setStudentEmail("");
+        setStudentFirstName("");
+        setStudentLastName("");
+        setStudentExpiryDate("");
+        fetchData(); // Refresh data
+      }
+    } catch (err) {
+      console.error(err);
+      toast.error("Something went wrong. Please try again.");
+    } finally {
+      setStudentSubmitting(false);
+    }
+  };
+
+  const handleEditExam = (exam: ExamWithStats) => {
+    setEditingExam(exam);
+    setShowEditModal(true);
+  };
+
+  const handleDeleteExam = async (examId: string) => {
+    if (
+      !confirm(
+        "Are you sure you want to delete this exam? This action cannot be undone."
+      )
+    ) {
+      return;
+    }
+
+    setDeletingExamId(examId);
+
+    try {
+      const session = await supabase.auth.getSession();
+      if (!session.data.session) {
+        toast.error("Not authenticated");
+        setDeletingExamId(null);
+        return;
+      }
+
+      const res = await fetch(`/api/exams/${examId}`, {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${session.data.session.access_token}`,
+        },
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        toast.error(data.error || "Failed to delete exam");
+      } else {
+        toast.success("Exam deleted successfully");
+        fetchData(); // Refresh data
+      }
+    } catch (err) {
+      console.error(err);
+      toast.error("Something went wrong. Please try again.");
+    } finally {
+      setDeletingExamId(null);
+    }
   };
 
   const handleExamCreationSuccess = () => {
@@ -242,7 +337,7 @@ export default function TeacherPage() {
                         <table className="min-w-full divide-y divide-gray-200">
                           <thead className="bg-gray-50">
                             <tr>
-                              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                              <th className="ali px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                 Exam Title
                               </th>
                               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -266,86 +361,104 @@ export default function TeacherPage() {
                             </tr>
                           </thead>
                           <tbody className="bg-white divide-y divide-gray-200">
-                            {exams.map((exam) => (
-                              <tr key={exam.id}>
-                                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                                  {exam.title}
-                                </td>
-                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                  <code className="bg-gray-100 px-2 py-1 rounded">
-                                    {exam.unique_code}
-                                  </code>
-                                </td>
-                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                  {exam.start_time ? (
-                                    <div>
+                            <AnimatePresence mode="popLayout">
+                              {exams.map((exam) => (
+                                <motion.tr
+                                  key={exam.id}
+                                  initial={{ x: -20, opacity: 0 }}
+                                  animate={{ x: 0, opacity: 1 }}
+                                  exit={{ x: 20, opacity: 0 }}
+                                  transition={{
+                                    duration: 0.3,
+                                    ease: "easeOut",
+                                  }}
+                                  layout
+                                >
+                                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                                    <span className="text-gray-900">
+                                      {exam.title}
+                                    </span>
+                                  </td>
+                                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                    <code className="bg-gray-100 px-2 py-1 rounded">
+                                      {exam.unique_code}
+                                    </code>
+                                  </td>
+                                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                    {exam.start_time ? (
                                       <div>
-                                        {new Date(
-                                          exam.start_time
-                                        ).toLocaleDateString("en-GB")}
+                                        <div>
+                                          {new Date(
+                                            exam.start_time
+                                          ).toLocaleDateString("en-GB")}
+                                        </div>
+                                        <div className="text-xs text-gray-400">
+                                          {new Date(
+                                            exam.start_time
+                                          ).toLocaleTimeString("en-GB", {
+                                            hour: "2-digit",
+                                            minute: "2-digit",
+                                          })}
+                                        </div>
                                       </div>
-                                      <div className="text-xs text-gray-400">
-                                        {new Date(
-                                          exam.start_time
-                                        ).toLocaleTimeString("en-GB", {
-                                          hour: "2-digit",
-                                          minute: "2-digit",
-                                        })}
-                                      </div>
-                                    </div>
-                                  ) : (
-                                    <span className="text-gray-400">
-                                      Not scheduled
-                                    </span>
-                                  )}
-                                </td>
-                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                  <div className="flex items-center space-x-1">
-                                    <span className="font-medium text-gray-900">
-                                      {exam.question_count || 0}
-                                    </span>
-                                    {(exam.question_count || 0) > 0 && (
-                                      <div className="text-xs text-gray-400">
-                                        ({exam.mcq_count || 0}M,{" "}
-                                        {exam.saq_count || 0}S,{" "}
-                                        {exam.coding_count || 0}C)
-                                      </div>
+                                    ) : (
+                                      <span className="text-gray-400">
+                                        Not scheduled
+                                      </span>
                                     )}
-                                  </div>
-                                </td>
-                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                  <span className="font-medium text-gray-900">
-                                    {exam.total_marks || 0}
-                                  </span>
-                                </td>
-                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                  {new Date(exam.created_at).toLocaleDateString(
-                                    "en-GB"
-                                  )}
-                                </td>
-                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                  <div className="flex space-x-2">
-                                    <Button
-                                      variant="outline"
-                                      className="text-xs px-2 py-1"
-                                    >
-                                      Edit
-                                    </Button>
-                                    <Button
-                                      variant="outline"
-                                      className="text-xs px-2 py-1"
-                                      onClick={() =>
-                                        router.push(
-                                          `/exam-questions/${exam.id}`
-                                        )
-                                      }
-                                    >
-                                      Questions
-                                    </Button>
-                                  </div>
-                                </td>
-                              </tr>
-                            ))}
+                                  </td>
+                                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                    <div className="flex items-center space-x-1">
+                                      <span className="font-medium text-gray-900">
+                                        {exam.question_count || 0}
+                                      </span>
+                                      {(exam.question_count || 0) > 0 && (
+                                        <div className="text-xs text-gray-400">
+                                          ({exam.mcq_count || 0}M,{" "}
+                                          {exam.saq_count || 0}S,{" "}
+                                          {exam.coding_count || 0}C)
+                                        </div>
+                                      )}
+                                    </div>
+                                  </td>
+                                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                    <span className="font-medium text-gray-900">
+                                      {exam.total_marks || 0}
+                                    </span>
+                                  </td>
+                                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                    {new Date(
+                                      exam.created_at
+                                    ).toLocaleDateString("en-GB")}
+                                  </td>
+                                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                    <div className="flex space-x-2">
+                                      <Button
+                                        variant="outline"
+                                        className="text-xs px-2 py-1 text-blue-600 border-blue-300 hover:bg-blue-50"
+                                        onClick={() => handleEditExam(exam)}
+                                        disabled={deletingExamId === exam.id}
+                                      >
+                                        Edit
+                                      </Button>
+                                      <Button
+                                        variant="outline"
+                                        className="text-xs px-2 py-1 text-red-600 border-red-300 hover:bg-red-50 w-20"
+                                        onClick={() =>
+                                          handleDeleteExam(exam.id)
+                                        }
+                                        disabled={deletingExamId === exam.id}
+                                        loading={deletingExamId === exam.id}
+                                      >
+                                        {deletingExamId === exam.id
+                                          ? "Deleting..."
+                                          : "Delete"}
+                                      </Button>
+                                    </div>
+                                  </td>
+                                </motion.tr>
+                              ))}
+                            </AnimatePresence>
                           </tbody>
                         </table>
                       )}
@@ -494,9 +607,15 @@ export default function TeacherPage() {
 
       {/* Exam Creation Modal */}
       <ExamCreateModal
-        isOpen={showCreateModal}
-        onClose={() => setShowCreateModal(false)}
+        isOpen={showCreateModal || showEditModal}
+        onClose={() => {
+          setShowCreateModal(false);
+          setShowEditModal(false);
+          setEditingExam(null);
+        }}
         onSuccess={handleExamCreationSuccess}
+        editExam={editingExam}
+        isEditMode={showEditModal}
       />
     </div>
   );

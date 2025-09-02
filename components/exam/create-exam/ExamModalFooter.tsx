@@ -7,6 +7,7 @@ interface ExamModalFooterProps {
   examTitle: string;
   questionsCount: number;
   submitting: boolean;
+  isEditMode?: boolean;
   onNextStep: () => void;
   onCreateExam: () => void;
   onCancel: () => void;
@@ -17,6 +18,7 @@ export default function ExamModalFooter({
   examTitle,
   questionsCount,
   submitting,
+  isEditMode = false,
   onNextStep,
   onCreateExam,
   onCancel,
@@ -41,7 +43,13 @@ export default function ExamModalFooter({
             loading={submitting}
             disabled={submitting || questionsCount === 0}
           >
-            {submitting ? "Creating Exam..." : "Create Exam"}
+            {submitting
+              ? isEditMode
+                ? "Updating Exam..."
+                : "Creating Exam..."
+              : isEditMode
+              ? "Update Exam"
+              : "Create Exam"}
           </Button>
         </div>
       )}

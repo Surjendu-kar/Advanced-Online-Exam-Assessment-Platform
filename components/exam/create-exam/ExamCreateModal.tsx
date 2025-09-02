@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { Button } from "@/components/ui/Button";
 import { supabase } from "@/lib/supabaseClient";
@@ -15,12 +15,16 @@ interface ExamCreateModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSuccess: () => void;
+  editExam?: any; // For edit mode
+  isEditMode?: boolean;
 }
 
 export default function ExamCreateModal({
   isOpen,
   onClose,
   onSuccess,
+  editExam,
+  isEditMode = false,
 }: ExamCreateModalProps) {
   const [step, setStep] = useState(1);
   const [examTitle, setExamTitle] = useState("");
@@ -69,8 +73,6 @@ export default function ExamCreateModal({
     test_cases: null,
   });
 
-  if (!isOpen) return null;
-
   const resetCurrentForm = () => {
     setMcqForm({
       question_text: "",
@@ -92,6 +94,165 @@ export default function ExamCreateModal({
       test_cases: null,
     });
   };
+
+  // Load exam data when in edit mode
+  useEffect(() => {
+    const loadExamData = async () => {
+      if (isEditMode && editExam && isOpen) {
+        // Set basic exam info
+        setExamTitle(editExam.title || "");
+        setExamDescription(editExam.description || "");
+
+        // Format datetime for datetime-local input
+        if (editExam.start_time) {
+          const startDate = new Date(editExam.start_time);
+          const localStart = new Date(
+            startDate.getTime() - startDate.getTimezoneOffset() * 60000
+          );
+          setStartTime(localStart.toISOString().slice(0, 16));
+        }
+
+        if (editExam.end_time) {
+          const endDate = new Date(editExam.end_time);
+          const localEnd = new Date(
+            endDate.getTime() - endDate.getTimezoneOffset() * 60000
+          );
+          setEndTime(localEnd.toISOString().slice(0, 16));
+        }
+
+        // Load existing questions
+        try {
+          const session = await supabase.auth.getSession();
+          if (session.data.session) {
+            const response = await fetch(
+              `/api/exams/${editExam.id}/questions`,
+              {
+                headers: {
+                  Authorization: `Bearer ${session.data.session.access_token}`,
+                },
+              }
+            );
+
+            if (response.ok) {
+              const result = await response.json();
+
+              // Check if result and questions exist
+              if (result && result.questions) {
+                const { questions: examQuestions } = result;
+
+                const allQuestions: Question[] = [];
+
+                // Process MCQ questions
+                if (examQuestions.mcq && Array.isArray(examQuestions.mcq)) {
+                  examQuestions.mcq.forEach((q: any, index: number) => {
+                    allQuestions.push({
+                      id: q.id,
+                      type: "mcq",
+                      question_text: q.question_text,
+                      marks: q.marks,
+                      order: q.question_order || index + 1,
+                      data: {
+                        question_text: q.question_text,
+                        options: q.options,
+                        correct_option: q.correct_option,
+                        marks: q.marks,
+                      },
+                    });
+                  });
+                }
+
+                // Process SAQ questions
+                if (examQuestions.saq && Array.isArray(examQuestions.saq)) {
+                  examQuestions.saq.forEach((q: any, index: number) => {
+                    allQuestions.push({
+                      id: q.id,
+                      type: "saq",
+                      question_text: q.question_text,
+                      marks: q.marks,
+                      order:
+                        q.question_order ||
+                        (examQuestions.mcq?.length || 0) + index + 1,
+                      data: {
+                        question_text: q.question_text,
+                        grading_guidelines: q.grading_guidelines,
+                        marks: q.marks,
+                      },
+                    });
+                  });
+                }
+
+                // Process Coding questions
+                if (
+                  examQuestions.coding &&
+                  Array.isArray(examQuestions.coding)
+                ) {
+                  examQuestions.coding.forEach((q: any, index: number) => {
+                    allQuestions.push({
+                      id: q.id,
+                      type: "coding",
+                      question_text: q.question_text,
+                      marks: q.marks,
+                      order:
+                        q.question_order ||
+                        (examQuestions.mcq?.length || 0) +
+                          (examQuestions.saq?.length || 0) +
+                          index +
+                          1,
+                      data: {
+                        question_text: q.question_text,
+                        starter_code: q.starter_code,
+                        expected_output: q.expected_output,
+                        language: q.language || "javascript",
+                        test_cases: q.test_cases,
+                        marks: q.marks,
+                      },
+                    });
+                  });
+                }
+
+                // Sort by order and set questions
+                allQuestions.sort((a, b) => a.order - b.order);
+                setQuestions(allQuestions);
+              }
+            } else {
+              console.error(
+                "Failed to load exam questions:",
+                response.status,
+                response.statusText
+              );
+              toast.error("Failed to load exam questions");
+            }
+          }
+        } catch (error) {
+          console.error("Error loading exam questions:", error);
+          toast.error("Failed to load exam questions");
+        }
+      }
+    };
+
+    loadExamData();
+  }, [isEditMode, editExam, isOpen]);
+
+  // Reset form when modal closes or switches to create mode
+  useEffect(() => {
+    if (!isOpen || !isEditMode) {
+      setStep(1);
+      setExamTitle("");
+      setExamDescription("");
+      setStartTime("");
+      setEndTime("");
+      setQuestions([]);
+      setCurrentQuestionType("mcq");
+      setShowQuestionForm(false);
+      setOpenAccordionId(null);
+      setIsDeleteMode(false);
+      setSelectedQuestions(new Set());
+      setNewlyAddedQuestions(new Set());
+      resetCurrentForm();
+    }
+  }, [isOpen, isEditMode]);
+
+  if (!isOpen) return null;
 
   const addQuestion = () => {
     let questionData;
@@ -252,7 +413,7 @@ export default function ExamCreateModal({
     );
   };
 
-  const createExam = async () => {
+  const saveExam = async () => {
     if (!examTitle.trim()) {
       toast.error("Please enter exam title");
       return;
@@ -273,29 +434,67 @@ export default function ExamCreateModal({
         return;
       }
 
-      const examRes = await fetch("/api/exams", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${session.data.session.access_token}`,
-        },
-        body: JSON.stringify({
-          title: examTitle,
-          description: examDescription,
-          startTime: startTime || null,
-          endTime: endTime || null,
-        }),
-      });
+      let examId: string;
 
-      const examData = await examRes.json();
-      if (!examRes.ok) {
-        toast.error(examData.error || "Failed to create exam");
-        setSubmitting(false);
-        return;
+      if (isEditMode && editExam) {
+        // Update existing exam
+        const examRes = await fetch(`/api/exams/${editExam.id}`, {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${session.data.session.access_token}`,
+          },
+          body: JSON.stringify({
+            title: examTitle,
+            description: examDescription,
+            startTime: startTime || null,
+            endTime: endTime || null,
+          }),
+        });
+
+        const examData = await examRes.json();
+        if (!examRes.ok) {
+          toast.error(examData.error || "Failed to update exam");
+          setSubmitting(false);
+          return;
+        }
+
+        examId = editExam.id;
+
+        // Delete existing questions (they will be recreated)
+        await fetch(`/api/exams/${examId}/questions`, {
+          method: "DELETE",
+          headers: {
+            Authorization: `Bearer ${session.data.session.access_token}`,
+          },
+        });
+      } else {
+        // Create new exam
+        const examRes = await fetch("/api/exams", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${session.data.session.access_token}`,
+          },
+          body: JSON.stringify({
+            title: examTitle,
+            description: examDescription,
+            startTime: startTime || null,
+            endTime: endTime || null,
+          }),
+        });
+
+        const examData = await examRes.json();
+        if (!examRes.ok) {
+          toast.error(examData.error || "Failed to create exam");
+          setSubmitting(false);
+          return;
+        }
+
+        examId = examData.exam.id;
       }
 
-      const examId = examData.exam.id;
-
+      // Create/recreate questions
       for (const question of questions) {
         const questionRes = await fetch(`/api/exams/${examId}/questions`, {
           method: "POST",
@@ -322,7 +521,11 @@ export default function ExamCreateModal({
         }
       }
 
-      toast.success(`Exam "${examTitle}" created successfully!`);
+      toast.success(
+        `Exam "${examTitle}" ${
+          isEditMode ? "updated" : "created"
+        } successfully!`
+      );
       onSuccess();
       onClose();
       resetModal();
@@ -347,7 +550,15 @@ export default function ExamCreateModal({
   const totalMarks = questions.reduce((sum, q) => sum + q.marks, 0);
 
   return (
-    <div className="fixed inset-0 bg-opacity-50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+    <div 
+      className="fixed inset-0 bg-opacity-50 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) {
+          onClose();
+          resetModal();
+        }
+      }}
+    >
       <style jsx>{`
         .scrollbar-thin::-webkit-scrollbar {
           width: 6px;
@@ -383,6 +594,7 @@ export default function ExamCreateModal({
       >
         <ExamModalHeader
           step={step}
+          isEditMode={isEditMode}
           onGoBack={() => setStep(1)}
           onClose={onClose}
         />
@@ -740,8 +952,9 @@ export default function ExamCreateModal({
           examTitle={examTitle}
           questionsCount={questions.length}
           submitting={submitting}
+          isEditMode={isEditMode}
           onNextStep={() => setStep(2)}
-          onCreateExam={createExam}
+          onCreateExam={saveExam}
           onCancel={() => {
             onClose();
             resetModal();

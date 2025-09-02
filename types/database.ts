@@ -145,6 +145,11 @@ export interface ExamWithStats extends Exam {
   mcq_count?: number;
   saq_count?: number;
   coding_count?: number;
+  unique_code?: string;
+  shuffle_questions?: boolean;
+  show_results_immediately?: boolean;
+  require_webcam?: boolean;
+  max_violations?: number;
 }
 
 export interface SessionWithLogs extends ExamSession {

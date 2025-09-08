@@ -13,7 +13,8 @@ export async function POST(req: Request) {
   const serverClient = createServerClient();
 
   try {
-    const { email, firstName, lastName, examId, expiresAt } = await req.json();
+    const { email, firstName, lastName, examId, duration, expiresAt } =
+      await req.json();
 
     // Validate input
     if (!email || !firstName || !lastName) {
@@ -78,6 +79,7 @@ export async function POST(req: Request) {
       firstName,
       lastName,
       examId,
+      duration,
       createdBy: user.id,
       expiresAt: expiresAt ? new Date(expiresAt) : undefined,
     });
@@ -140,6 +142,7 @@ export async function GET(req: Request) {
     // Get exam_id from query params if provided
     const url = new URL(req.url);
     const examId = url.searchParams.get("exam_id");
+    const includeGrading = url.searchParams.get("include_grading") === "true";
 
     // Get student invitations
     const invitations = await getStudentInvitations(
@@ -148,11 +151,37 @@ export async function GET(req: Request) {
       examId || undefined
     );
 
+    // If grading info is requested, enhance invitations with grading data
+    let enhancedInvitations = invitations;
+    if (includeGrading && invitations) {
+      const invitationsWithGrading = await Promise.all(
+        invitations.map(async (invitation) => {
+          if (!invitation.exam_id) return invitation;
+
+          // Get student response for this exam
+          const { data: response } = await routeClient
+            .from("student_responses")
+            .select("total_score, grading_status, submitted_at")
+            .eq("exam_id", invitation.exam_id)
+            .eq("student_email", invitation.student_email)
+            .single();
+
+          return {
+            ...invitation,
+            grading_status: response?.grading_status || null,
+            total_score: response?.total_score || null,
+            submission_date: response?.submitted_at || null,
+          };
+        })
+      );
+      enhancedInvitations = invitationsWithGrading;
+    }
+
     // Get existing students created by this teacher/admin
     const students = await getTeacherStudents(routeClient, user.id);
 
     return NextResponse.json({
-      invitations: invitations || [],
+      invitations: enhancedInvitations || [],
       students: students || [],
     });
   } catch (error) {

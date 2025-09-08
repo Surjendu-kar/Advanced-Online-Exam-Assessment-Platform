@@ -196,9 +196,48 @@ export async function GET(
 
     if (profile.role === "teacher") {
       query = query.eq("created_by", user.id);
+    } else if (profile.role === "student") {
+      // For students, check if they have access via invitation
+      const { data: invitation } = await routeClient
+        .from("student_invitations")
+        .select("*")
+        .eq("exam_id", examId)
+        .eq("student_id", user.id)
+        .eq("status", "accepted")
+        .single();
+
+      if (!invitation) {
+        // Also check by email in case student_id wasn't updated
+        const { data: emailInvitation } = await routeClient
+          .from("student_invitations")
+          .select("*")
+          .eq("exam_id", examId)
+          .eq("student_email", user.email || "")
+          .eq("status", "accepted")
+          .single();
+
+        if (!emailInvitation) {
+          return NextResponse.json(
+            {
+              error:
+                "You don't have access to this exam. Please check your invitation.",
+            },
+            { status: 403 }
+          );
+        }
+      }
     }
 
     const { data: exam, error } = await query.single();
+
+    console.log(
+      `Debug - Exam access for user ${user.id} (${profile.role}) to exam ${examId}:`,
+      {
+        examFound: !!exam,
+        examError: error?.message,
+        userEmail: user.email,
+      }
+    );
 
     if (error || !exam) {
       return NextResponse.json(

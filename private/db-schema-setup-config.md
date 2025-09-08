@@ -125,6 +125,12 @@ create table public.student_invitations (
   last_name text not null,
   invitation_token text not null,
   exam_id uuid null,
+-- Update student_id for existing invitations where it's missing
+UPDATE public.student_invitations
+SET student_id = auth_users.id
+FROM auth.users auth_users
+WHERE student_invitations.student_email = auth_users.email
+AND student_invitations.student_id IS NULL;  duration integer null default 60,
   status text null default 'pending'::text,
   expires_at timestamp with time zone not null,
   created_at timestamp with time zone null default now(),
@@ -214,6 +220,40 @@ create table public.coding (
 );
 ```
 
+### Student Responses Table (Optimized single-row storage)
+
+```sql
+create table public.student_responses (
+  id uuid not null default gen_random_uuid(),
+  student_id uuid not null,
+  exam_session_id uuid not null,
+  exam_id uuid not null,
+  student_first_name text not null,
+  student_last_name text not null,
+  student_email text not null,
+  answers jsonb not null default '{}',
+  total_score integer not null default 0,
+  max_possible_score integer not null default 0,
+  auto_graded_score integer not null default 0,
+  manual_graded_score integer not null default 0,
+  grading_status text not null default 'pending',
+  graded_by uuid null,
+  graded_at timestamp with time zone null,
+  -- teacher_feedback text null,  -- Dropped as feedback is now stored per question in answers JSONB
+  submitted_at timestamp with time zone not null default now(),
+  created_at timestamp with time zone not null default now(),
+  updated_at timestamp with time zone not null default now(),
+
+  constraint student_responses_pkey primary key (id),
+  constraint student_responses_student_id_fkey foreign key (student_id) references auth.users (id) on delete cascade,
+  constraint student_responses_exam_session_id_fkey foreign key (exam_session_id) references exam_sessions (id) on delete cascade,
+  constraint student_responses_exam_id_fkey foreign key (exam_id) references exams (id) on delete cascade,
+  constraint student_responses_graded_by_fkey foreign key (graded_by) references auth.users (id),
+  constraint student_responses_grading_status_check check (grading_status in ('pending', 'partial', 'completed')),
+  constraint student_responses_unique_session unique (student_id, exam_session_id)
+);
+```
+
 ### Proctoring Logs Table
 
 ```sql
@@ -239,6 +279,7 @@ alter table public.student_invitations enable row level security;
 alter table public.mcq enable row level security;
 alter table public.saq enable row level security;
 alter table public.coding enable row level security;
+alter table public.student_responses enable row level security;
 alter table public.proctoring_logs enable row level security;
 ```
 
@@ -349,22 +390,71 @@ create policy "Exam sessions updatable by session owner or exam creator" on publ
 ### Student Invitations Policies
 
 ```sql
+-- Teachers can manage their student invitations
 create policy "Teachers can manage their student invitations" on public.student_invitations
   for all using (auth.uid() = teacher_id);
 
+-- Service role can access student invitations (for server-side operations)
 create policy "Service role can access student invitations" on public.student_invitations
   for all using (auth.role() = 'service_role'::text);
+
+-- Students can view invitations where they are the student
+create policy "Students can view their invitations" on public.student_invitations
+  for select using (auth.uid() = student_id);
+
+-- Students can view invitations sent to their email (for logged-in users)
+create policy "Students can view invitations by email" on public.student_invitations
+  for select using (
+    exists (
+      select 1 from auth.users
+      where auth.users.id = auth.uid()
+      and auth.users.email = student_invitations.student_email
+    )
+  );
+
+-- Students can update invitations sent to their email (for accepting)
+create policy "Students can update invitations by email" on public.student_invitations
+  for update using (
+    exists (
+      select 1 from auth.users
+      where auth.users.id = auth.uid()
+      and auth.users.email = student_invitations.student_email
+    )
+  );
+
+-- Allow public read access for token-based validation (invitation acceptance flow)
+create policy "Public access for token validation" on public.student_invitations
+  for select using (true);
+
+-- Admins can view all student invitations
+create policy "Admins can view all student invitations" on public.student_invitations
+  for select using (is_admin());
 ```
 
 ### MCQ Policies
 
 ```sql
-create policy "MCQ questions viewable by exam creator and students" on public.mcq
+create policy "MCQ questions viewable by creators and invited students" on public.mcq
   for select using (
+    -- Exam creator can view all questions for their exam
     exists (
       select 1 from exams
       where exams.id = mcq.exam_id
-      and ((exams.created_by = auth.uid()) or (auth.uid() = mcq.user_id))
+      and exams.created_by = auth.uid()
+    )
+    or
+    -- Students can view their own answers
+    (auth.uid() = mcq.user_id)
+    or
+    -- Students with valid invitations can view template questions (user_id IS NULL)
+    (
+      mcq.user_id IS NULL
+      and exists (
+        select 1 from student_invitations si
+        where si.exam_id = mcq.exam_id
+        and si.status = 'accepted'
+        and si.student_id = auth.uid()
+      )
     )
   );
 
@@ -399,12 +489,27 @@ create policy "MCQ questions deletable by exam creator" on public.mcq
 ### SAQ Policies
 
 ```sql
-create policy "SAQ questions viewable by exam creator and students" on public.saq
+create policy "SAQ questions viewable by creators and invited students" on public.saq
   for select using (
+    -- Exam creator can view all questions for their exam
     exists (
       select 1 from exams
       where exams.id = saq.exam_id
-      and ((exams.created_by = auth.uid()) or (auth.uid() = saq.user_id))
+      and exams.created_by = auth.uid()
+    )
+    or
+    -- Students can view their own answers
+    (auth.uid() = saq.user_id)
+    or
+    -- Students with valid invitations can view template questions (user_id IS NULL)
+    (
+      saq.user_id IS NULL
+      and exists (
+        select 1 from student_invitations si
+        where si.exam_id = saq.exam_id
+        and si.status = 'accepted'
+        and si.student_id = auth.uid()
+      )
     )
   );
 
@@ -439,12 +544,27 @@ create policy "SAQ questions deletable by exam creator" on public.saq
 ### Coding Policies
 
 ```sql
-create policy "Coding questions viewable by exam creator and students" on public.coding
+create policy "Coding questions viewable by creators and invited students" on public.coding
   for select using (
+    -- Exam creator can view all questions for their exam
     exists (
       select 1 from exams
       where exams.id = coding.exam_id
-      and ((exams.created_by = auth.uid()) or (auth.uid() = coding.user_id))
+      and exams.created_by = auth.uid()
+    )
+    or
+    -- Students can view their own answers
+    (auth.uid() = coding.user_id)
+    or
+    -- Students with valid invitations can view template questions (user_id IS NULL)
+    (
+      coding.user_id IS NULL
+      and exists (
+        select 1 from student_invitations si
+        where si.exam_id = coding.exam_id
+        and si.status = 'accepted'
+        and si.student_id = auth.uid()
+      )
     )
   );
 
@@ -472,6 +592,73 @@ create policy "Coding questions deletable by exam creator" on public.coding
       select 1 from exams
       where exams.id = coding.exam_id
       and exams.created_by = auth.uid()
+    )
+  );
+```
+
+### Student Responses Policies
+
+```sql
+-- Students can only view their own responses
+create policy "Students can view own responses" on public.student_responses
+  for select using (
+    auth.uid() = student_id OR
+    exists (
+      select 1 from user_profiles
+      where id = auth.uid() and role = 'student'
+    )
+  );
+
+-- Teachers can view responses for their exams
+create policy "Teachers can view exam responses" on public.student_responses
+  for select using (
+    exists (
+      select 1 from exams e
+      join user_profiles up on up.id = auth.uid()
+      where e.id = student_responses.exam_id
+      and e.created_by = auth.uid()
+      and up.role = 'teacher'
+    )
+  );
+
+-- Teachers can update (grade) responses for their exams
+create policy "Teachers can update exam responses" on public.student_responses
+  for update using (
+    exists (
+      select 1 from exams e
+      join user_profiles up on up.id = auth.uid()
+      where e.id = student_responses.exam_id
+      and e.created_by = auth.uid()
+      and up.role = 'teacher'
+    )
+  );
+
+-- Students can insert their own responses
+create policy "Students can insert own responses" on public.student_responses
+  for insert with check (
+    auth.uid() = student_id and
+    exists (
+      select 1 from user_profiles
+      where id = auth.uid() and role = 'student'
+    )
+  );
+
+-- Students can update their own responses (before final submission)
+create policy "Students can update own responses" on public.student_responses
+  for update using (
+    auth.uid() = student_id and
+    exists (
+      select 1 from user_profiles
+      where id = auth.uid() and role = 'student'
+    )
+  );
+
+-- Admins have full access
+create policy "Admins have full access to student responses" on public.student_responses
+  for all using (
+    exists (
+      select 1 from user_profiles
+      where id = auth.uid() and role = 'admin'
     )
   );
 ```
@@ -528,16 +715,88 @@ CREATE INDEX IF NOT EXISTS idx_saq_graded_by ON public.saq(graded_by);
 CREATE INDEX IF NOT EXISTS idx_saq_graded_at ON public.saq(graded_at);
 CREATE INDEX IF NOT EXISTS idx_coding_graded_by ON public.coding(graded_by);
 CREATE INDEX IF NOT EXISTS idx_coding_graded_at ON public.coding(graded_at);
+
+-- Student responses indexes for performance
+CREATE INDEX IF NOT EXISTS idx_student_responses_exam_id ON public.student_responses(exam_id);
+CREATE INDEX IF NOT EXISTS idx_student_responses_student_email ON public.student_responses(student_email);
+CREATE INDEX IF NOT EXISTS idx_student_responses_grading_status ON public.student_responses(grading_status);
+CREATE INDEX IF NOT EXISTS idx_student_responses_submitted_at ON public.student_responses(submitted_at);
 ```
 
-## 7. Setup Instructions
+## 7. Database Migrations (For Existing Installations)
+
+If you already have the database set up but need to add the duration field and update policies:
+
+```sql
+-- Add duration field to existing student_invitations table
+ALTER TABLE public.student_invitations
+ADD COLUMN IF NOT EXISTS duration integer DEFAULT 60;
+
+-- Update existing records to have default duration
+UPDATE public.student_invitations
+SET duration = 60
+WHERE duration IS NULL;
+
+-- Drop the old restrictive policy if it exists
+DROP POLICY IF EXISTS "Students can view invitations by email" ON public.student_invitations;
+
+-- Recreate the policy with better logic
+create policy "Students can view invitations by email" on public.student_invitations
+  for select using (
+    exists (
+      select 1 from auth.users
+      where auth.users.id = auth.uid()
+      and auth.users.email = student_invitations.student_email
+    )
+  );
+
+-- Add public access policy for token validation
+create policy "Public access for token validation" on public.student_invitations
+  for select using (true);
+
+-- Add admin access policy
+create policy "Admins can view all student invitations" on public.student_invitations
+  for select using (is_admin());
+
+-- Fix grading status for existing student responses (if student_responses table exists)
+UPDATE public.student_responses
+SET grading_status = CASE
+  -- If all questions in answers are marked as graded, mark as completed
+  WHEN (
+    SELECT COUNT(*)
+    FROM jsonb_each(answers) as answer_entry
+    WHERE (answer_entry.value->>'graded')::boolean = true
+  ) = (
+    SELECT COUNT(*)
+    FROM jsonb_each(answers)
+  ) THEN 'completed'
+
+  -- If no questions are graded, mark as pending
+  WHEN (
+    SELECT COUNT(*)
+    FROM jsonb_each(answers) as answer_entry
+    WHERE (answer_entry.value->>'graded')::boolean = true
+  ) = 0 THEN 'pending'
+
+  -- Otherwise, it's partial
+  ELSE 'partial'
+END,
+updated_at = NOW()
+WHERE grading_status IS NOT NULL;
+
+-- Drop teacher_feedback column from student_responses table as feedback is now stored per question
+ALTER TABLE public.student_responses
+DROP COLUMN IF EXISTS teacher_feedback;
+```
+
+## 8. Setup Instructions
 
 1. **Copy and paste each section** into your Supabase SQL Editor
 2. **Run them in order** (Extensions → Functions → Tables → RLS → Policies → Triggers)
 3. **Verify all tables are created** in your Supabase dashboard
 4. **Test the policies** by trying to insert/select data with different user roles
 
-## 8. Creating Your First Admin User
+## 9. Creating Your First Admin User
 
 After setting up the database, you'll need to create your first admin user. Here are two approaches:
 
@@ -598,7 +857,7 @@ FROM auth.users
 WHERE email = 'admin@yourplatform.com';
 ```
 
-## 9. Environment Variables Required
+## 10. Environment Variables Required
 
 Make sure you have these environment variables in your `.env.local`:
 

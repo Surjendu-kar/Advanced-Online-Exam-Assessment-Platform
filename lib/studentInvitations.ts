@@ -8,6 +8,7 @@ export interface CreateStudentInvitationData {
   firstName: string;
   lastName: string;
   examId?: string;
+  duration?: number; // Exam duration in minutes
   createdBy: string; // teacher_id
   expiresAt?: Date; // optional expiry date
 }
@@ -36,6 +37,7 @@ export async function createStudentInvitation(
     firstName,
     lastName,
     examId,
+    duration,
     createdBy,
     expiresAt,
   }: CreateStudentInvitationData
@@ -266,10 +268,17 @@ export async function acceptStudentInvitation(
       };
     }
 
-    // Mark invitation as accepted
+    // Mark invitation as accepted and update student_id if not set
+    const updateData: any = { status: "accepted" };
+
+    // Update student_id if it's not set
+    if (!invitation.student_id) {
+      updateData.student_id = existingUser.id;
+    }
+
     const { error: updateError } = await supabase
       .from("student_invitations")
-      .update({ status: "accepted" })
+      .update(updateData)
       .eq("invitation_token", token);
 
     if (updateError) {

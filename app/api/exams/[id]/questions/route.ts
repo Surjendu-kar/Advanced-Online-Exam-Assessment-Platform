@@ -167,6 +167,36 @@ export async function GET(
           { status: 404 }
         );
       }
+    } else if (profile.role === "student") {
+      // For students, check if they have access via invitation
+      const { data: invitation } = await routeClient
+        .from("student_invitations")
+        .select("*")
+        .eq("exam_id", examId)
+        .eq("student_id", user.id)
+        .eq("status", "accepted")
+        .single();
+
+      if (!invitation) {
+        // Also check by email in case student_id wasn't updated
+        const { data: emailInvitation } = await routeClient
+          .from("student_invitations")
+          .select("*")
+          .eq("exam_id", examId)
+          .eq("student_email", user.email || "")
+          .eq("status", "accepted")
+          .single();
+
+        if (!emailInvitation) {
+          return NextResponse.json(
+            {
+              error:
+                "You don't have access to this exam. Please check your invitation.",
+            },
+            { status: 403 }
+          );
+        }
+      }
     }
 
     const [mcqQuestions, saqQuestions, codingQuestions] = await Promise.all([
@@ -174,18 +204,32 @@ export async function GET(
         .from("mcq")
         .select("*")
         .eq("exam_id", examId)
+        .is("user_id", null)
         .order("question_order", { ascending: true }),
       routeClient
         .from("saq")
         .select("*")
         .eq("exam_id", examId)
+        .is("user_id", null)
         .order("question_order", { ascending: true }),
       routeClient
         .from("coding")
         .select("*")
         .eq("exam_id", examId)
+        .is("user_id", null)
         .order("question_order", { ascending: true }),
     ]);
+
+    console.log(`Debug - Questions API for exam ${examId}:`, {
+      mcqCount: mcqQuestions.data?.length || 0,
+      saqCount: saqQuestions.data?.length || 0,
+      codingCount: codingQuestions.data?.length || 0,
+      mcqError: mcqQuestions.error,
+      saqError: saqQuestions.error,
+      codingError: codingQuestions.error,
+      userRole: profile.role,
+      userId: user.id,
+    });
 
     return NextResponse.json({
       questions: {

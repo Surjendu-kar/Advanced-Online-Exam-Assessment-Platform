@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/Button";
 import { supabase } from "@/lib/supabaseClient";
 import { toast } from "react-hot-toast";
 import ExamCreateModal from "@/components/exam/create-exam/ExamCreateModal";
+import GradingModal from "@/components/grading/GradingModal";
 import { ExamWithStats } from "@/types/database";
 import { motion, AnimatePresence } from "motion/react";
 
@@ -19,6 +20,11 @@ interface StudentInvitation {
   exam_id?: string;
   expires_at: string;
   created_at: string;
+  exam_title?: string;
+  exam_code?: string;
+  grading_status?: "pending" | "partial" | "completed" | null;
+  total_score?: number;
+  submission_date?: string;
 }
 
 export default function TeacherPage() {
@@ -29,6 +35,8 @@ export default function TeacherPage() {
   const [studentEmail, setStudentEmail] = useState("");
   const [studentFirstName, setStudentFirstName] = useState("");
   const [studentLastName, setStudentLastName] = useState("");
+  const [selectedExamId, setSelectedExamId] = useState("");
+  const [examDuration, setExamDuration] = useState(60); // Default 60 minutes
   const [studentExpiryDate, setStudentExpiryDate] = useState("");
   const [studentSubmitting, setStudentSubmitting] = useState(false);
 
@@ -40,12 +48,17 @@ export default function TeacherPage() {
   const [showEditModal, setShowEditModal] = useState(false);
   const [deletingExamId, setDeletingExamId] = useState<string | null>(null);
 
-  // Data states
+  // Student invitations with grading data
   const [studentInvitations, setStudentInvitations] = useState<
     StudentInvitation[]
   >([]);
   const [exams, setExams] = useState<ExamWithStats[]>([]);
   const [loadingData, setLoadingData] = useState(true);
+
+  // Grading state
+  const [showGradingModal, setShowGradingModal] = useState(false);
+  const [selectedStudentResponse, setSelectedStudentResponse] =
+    useState<any>(null);
 
   // Tab state
   const [activeTab, setActiveTab] = useState<"exams" | "students">("exams");
@@ -74,8 +87,8 @@ export default function TeacherPage() {
         setExams(examData.exams || []);
       }
 
-      // Fetch student invitations
-      const studentRes = await fetch("/api/students", {
+      // Fetch student invitations with grading data
+      const studentRes = await fetch("/api/students?include_grading=true", {
         headers: {
           Authorization: `Bearer ${session.data.session.access_token}`,
         },
@@ -133,6 +146,8 @@ export default function TeacherPage() {
           email: studentEmail,
           firstName: studentFirstName,
           lastName: studentLastName,
+          examId: selectedExamId || undefined,
+          duration: examDuration,
           expiresAt: studentExpiryDate || undefined,
         }),
       });
@@ -147,6 +162,8 @@ export default function TeacherPage() {
         setStudentEmail("");
         setStudentFirstName("");
         setStudentLastName("");
+        setSelectedExamId("");
+        setExamDuration(60);
         setStudentExpiryDate("");
         fetchData(); // Refresh data
       }
@@ -193,7 +210,7 @@ export default function TeacherPage() {
       if (!res.ok) {
         toast.error(data.error || "Failed to delete exam");
       } else {
-        toast.success("Exam deleted successfully");
+        toast.success("Exam deleted successfully!");
         fetchData(); // Refresh data
       }
     } catch (err) {
@@ -201,6 +218,83 @@ export default function TeacherPage() {
       toast.error("Something went wrong. Please try again.");
     } finally {
       setDeletingExamId(null);
+    }
+  };
+
+  const handleOpenGrading = async (invitation: StudentInvitation) => {
+    if (!invitation.exam_id) {
+      toast.error("No exam associated with this invitation");
+      return;
+    }
+
+    try {
+      // Fetch student response for this exam
+      const session = await supabase.auth.getSession();
+      if (!session.data.session) return;
+
+      const res = await fetch(
+        `/api/exams/${invitation.exam_id}/grading?student_email=${invitation.student_email}`,
+        {
+          headers: {
+            Authorization: `Bearer ${session.data.session.access_token}`,
+          },
+        }
+      );
+
+      if (res.ok) {
+        const responseData = await res.json();
+        setSelectedStudentResponse({
+          ...responseData,
+          student_name: `${invitation.first_name} ${invitation.last_name}`,
+          student_email: invitation.student_email,
+        });
+        setShowGradingModal(true);
+      } else {
+        toast.error("No submission found for this student");
+      }
+    } catch (error) {
+      console.error("Error fetching student response:", error);
+      toast.error("Failed to load grading data");
+    }
+  };
+
+  const getGradingStatusBadge = (
+    status?: string | null,
+    hasSubmission?: boolean
+  ) => {
+    if (!hasSubmission) {
+      return (
+        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+          Not Submitted
+        </span>
+      );
+    }
+
+    switch (status) {
+      case "completed":
+        return (
+          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+            ✓ Graded
+          </span>
+        );
+      case "partial":
+        return (
+          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+            ⏳ Needs Grading
+          </span>
+        );
+      case "pending":
+        return (
+          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+            ⏳ Pending Review
+          </span>
+        );
+      default:
+        return (
+          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+            Unknown
+          </span>
+        );
     }
   };
 
@@ -502,6 +596,57 @@ export default function TeacherPage() {
                         className="w-full border border-gray-300 p-3 rounded-md placeholder-gray-400 text-black focus:ring-1 focus:ring-blue-500 focus:outline-none focus:border-transparent"
                         disabled={studentSubmitting}
                       />
+
+                      {/* Exam Selection */}
+                      <div className="space-y-2">
+                        <label className="block text-sm font-medium text-gray-700">
+                          Select Exam (Optional)
+                        </label>
+                        <select
+                          value={selectedExamId}
+                          onChange={(e) => setSelectedExamId(e.target.value)}
+                          className="w-full border border-gray-300 p-3 rounded-md text-black focus:ring-1 focus:ring-blue-500 focus:outline-none focus:border-transparent"
+                          disabled={studentSubmitting}
+                          aria-label="Select exam for student invitation"
+                        >
+                          <option value="">
+                            No specific exam (Platform access only)
+                          </option>
+                          {exams.map((exam) => (
+                            <option key={exam.id} value={exam.id}>
+                              {exam.title} ({exam.unique_code})
+                            </option>
+                          ))}
+                        </select>
+                        <p className="text-xs text-gray-500">
+                          Select an exam to invite student for a specific exam,
+                          or leave empty for general platform access
+                        </p>
+                      </div>
+
+                      {/* Duration Field - Only show when exam is selected */}
+                      {selectedExamId && (
+                        <div className="space-y-2">
+                          <label className="block text-sm font-medium text-gray-700">
+                            Exam Duration (minutes)
+                          </label>
+                          <input
+                            type="number"
+                            min="5"
+                            max="480"
+                            value={examDuration}
+                            onChange={(e) =>
+                              setExamDuration(Number(e.target.value))
+                            }
+                            className="w-full border border-gray-300 p-3 rounded-md text-black focus:ring-1 focus:ring-blue-500 focus:outline-none focus:border-transparent"
+                            disabled={studentSubmitting}
+                            aria-label="Exam duration in minutes"
+                          />
+                          <p className="text-xs text-gray-500">
+                            Duration between 5 and 480 minutes (8 hours)
+                          </p>
+                        </div>
+                      )}
                       <div className="space-y-2">
                         <label className="block text-sm font-medium text-gray-700">
                           Expiry Date (Optional)
@@ -559,13 +704,22 @@ export default function TeacherPage() {
                                 Email
                               </th>
                               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                Status
+                                Exam
+                              </th>
+                              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Invitation Status
+                              </th>
+                              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Grading Status
+                              </th>
+                              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Score
                               </th>
                               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                 Invited
                               </th>
                               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                Expires
+                                Actions
                               </th>
                             </tr>
                           </thead>
@@ -578,18 +732,75 @@ export default function TeacherPage() {
                                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                                   {invitation.student_email}
                                 </td>
+                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                  {invitation.exam_id ? (
+                                    <div>
+                                      <div className="font-medium text-gray-900">
+                                        {invitation.exam_title || "Exam"}
+                                      </div>
+                                      {invitation.exam_code && (
+                                        <div className="text-xs text-gray-400">
+                                          Code: {invitation.exam_code}
+                                        </div>
+                                      )}
+                                    </div>
+                                  ) : (
+                                    <span className="text-gray-400">
+                                      Platform Access
+                                    </span>
+                                  )}
+                                </td>
                                 <td className="px-6 py-4 whitespace-nowrap">
                                   {getStatusBadge(invitation.status)}
                                 </td>
-                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                  {new Date(
-                                    invitation.created_at
-                                  ).toLocaleDateString("en-GB")}
+                                <td className="px-6 py-4 whitespace-nowrap">
+                                  {getGradingStatusBadge(
+                                    invitation.grading_status,
+                                    !!invitation.submission_date
+                                  )}
                                 </td>
                                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                  {new Date(
-                                    invitation.expires_at
-                                  ).toLocaleDateString("en-GB")}
+                                  {invitation.total_score !== undefined ? (
+                                    <span className="font-medium text-gray-900">
+                                      {invitation.total_score} marks
+                                    </span>
+                                  ) : (
+                                    <span className="text-gray-400">-</span>
+                                  )}
+                                </td>
+                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                  <div>
+                                    {new Date(
+                                      invitation.created_at
+                                    ).toLocaleDateString("en-GB")}
+                                  </div>
+                                  {invitation.submission_date && (
+                                    <div className="text-xs text-gray-400">
+                                      Submitted:{" "}
+                                      {new Date(
+                                        invitation.submission_date
+                                      ).toLocaleDateString("en-GB")}
+                                    </div>
+                                  )}
+                                </td>
+                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                  <div className="flex space-x-2">
+                                    {invitation.exam_id &&
+                                      invitation.submission_date && (
+                                        <Button
+                                          variant="outline"
+                                          className="text-xs px-2 py-1 text-blue-600 border-blue-300 hover:bg-blue-50"
+                                          onClick={() =>
+                                            handleOpenGrading(invitation)
+                                          }
+                                        >
+                                          {invitation.grading_status ===
+                                          "completed"
+                                            ? "View Grades"
+                                            : "Grade Answers"}
+                                        </Button>
+                                      )}
+                                  </div>
                                 </td>
                               </tr>
                             ))}
@@ -604,6 +815,17 @@ export default function TeacherPage() {
           </div>
         </div>
       </main>
+
+      {/* Grading Modal */}
+      <GradingModal
+        isOpen={showGradingModal}
+        onClose={() => {
+          setShowGradingModal(false);
+          setSelectedStudentResponse(null);
+        }}
+        studentResponse={selectedStudentResponse}
+        onGradingComplete={fetchData}
+      />
 
       {/* Exam Creation Modal */}
       <ExamCreateModal

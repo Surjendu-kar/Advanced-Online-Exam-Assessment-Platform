@@ -94,7 +94,12 @@ export default function StudentInvitationPage() {
 
         // Wait for the session to be properly set, then redirect
         setTimeout(() => {
-          router.push(data.redirectUrl || "/student");
+          // If exam_id exists, redirect to exam taking page
+          if (data.examId) {
+            router.push(`/student/exam/${data.examId}/take`);
+          } else {
+            router.push(data.redirectUrl || "/student");
+          }
         }, 1500);
       } else {
         // Fallback to login page if no password data
@@ -219,7 +224,7 @@ export default function StudentInvitationPage() {
               {accepting
                 ? "Accepting Invitation..."
                 : invitation?.exam_id
-                ? "Accept & Start Exam"
+                ? "Accept & Access Exam"
                 : "Accept Invitation"}
             </Button>
           </div>

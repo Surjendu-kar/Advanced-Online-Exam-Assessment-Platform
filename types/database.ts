@@ -182,3 +182,35 @@ export interface TeacherInvitation {
   used_at?: string;
   created_at: string;
 }
+
+export interface StudentResponse {
+  id: string;
+  student_id: string;
+  exam_session_id: string;
+  exam_id: string;
+  student_first_name: string;
+  student_last_name: string;
+  student_email: string;
+  answers: {
+    [questionId: string]: {
+      answer: any; // MCQ: number, SAQ: string, Coding: string
+      type: "mcq" | "saq" | "coding";
+      question_number: number;
+      is_correct?: boolean;
+      marks_obtained?: number;
+      graded?: boolean;
+      language?: string; // For coding questions
+    };
+  };
+  total_score: number;
+  max_possible_score: number;
+  auto_graded_score: number;
+  manual_graded_score: number;
+  grading_status: "pending" | "partial" | "completed";
+  graded_by?: string;
+  graded_at?: string;
+  teacher_feedback?: string;
+  submitted_at: string;
+  created_at: string;
+  updated_at: string;
+}
